@@ -1,4 +1,4 @@
-//! `appctl mcp` - placeholder for the future MCP transport.
+//! `actsim mcp` - placeholder for the future MCP transport.
 //!
 //! MCP is **designed-for but not built** this iteration (see the PRD §8 and
 //! `docs/mcp.md`). It needs nothing new from `engine`: the typed command
@@ -11,16 +11,16 @@
 /// Print the "not implemented" notice and exit with `EX_UNAVAILABLE` (69).
 pub fn run() -> ! {
     eprintln!(
-        "appctl mcp is not implemented yet.\n\
+        "actsim mcp is not implemented yet.\n\
          \n\
          MCP is a planned transport that will expose the same engine command\n\
          registry as MCP tools:\n\
            tools/list  ← registry schemas  (registry.schemas())\n\
            tools/call  → registry dispatch (registry.call)\n\
-         mounted in-process alongside `appctl serve`, mirroring the HTTP API.\n\
+         mounted in-process alongside `actsim serve`, mirroring the HTTP API.\n\
          See docs/mcp.md for the adapter design.\n\
          \n\
-         For now use `appctl serve` (HTTP API) or `appctl call <cmd>` (CLI)."
+         For now use `actsim serve` (HTTP API) or `actsim call <cmd>` (CLI)."
     );
     std::process::exit(69);
 }

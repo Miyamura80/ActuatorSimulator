@@ -1,18 +1,18 @@
-# appctl – CLI + HTTP API
+# actsim – CLI + HTTP API
 
-The `appctl` binary drives the shared `engine` command registry over multiple
+The `actsim` binary drives the shared `engine` command registry over multiple
 transports: the CLI (`call` / `probe` / `doctor` / `run-scenario`) and the axum
 HTTP API (`serve`). `init` onboards the template into a real project, `new`
 scaffolds a command, and `mcp` is a stub for the future MCP transport.
 
 The `cli` and `http-api` surfaces are cargo features (both on by default), so
-`appctl init` can prune one and still leave a compiling binary.
+`actsim init` can prune one and still leave a compiling binary.
 
 ## Build
 
 ```bash
-cargo build -p appctl
-# Binary at target/debug/appctl (or target/release/appctl with --release)
+cargo build -p actsim
+# Binary at target/debug/actsim (or target/release/actsim with --release)
 ```
 
 ## Commands
@@ -23,13 +23,13 @@ Collect environment facts (OS, kernel, headless detection, proxy vars).
 
 ```bash
 # Human-readable
-appctl doctor
+actsim doctor
 
 # JSON output
-appctl doctor --json
+actsim doctor --json
 
 # Write result to file
-appctl doctor --json --out /tmp/env.json
+actsim doctor --json --out /tmp/env.json
 ```
 
 ### call
@@ -38,16 +38,16 @@ Invoke a backend command by name with JSON arguments.
 
 ```bash
 # Ping (prove wiring works)
-appctl call ping --json
+actsim call ping --json
 
 # Read a file
-appctl call read_file --args '{"path": "/etc/hostname"}' --json
+actsim call read_file --args '{"path": "/etc/hostname"}' --json
 
 # Write a file
-appctl call write_file --args '{"path": "/tmp/test.txt", "content": "hello"}' --json
+actsim call write_file --args '{"path": "/tmp/test.txt", "content": "hello"}' --json
 
 # With artifacts directory
-appctl call ping --json --artifacts /tmp/artifacts
+actsim call ping --json --artifacts /tmp/artifacts
 ```
 
 ### probe
@@ -56,10 +56,10 @@ Targeted capability checks.
 
 ```bash
 # Filesystem probe (create/read/write/delete in temp dir)
-appctl probe filesystem --json
+actsim probe filesystem --json
 
 # Network probe (DNS resolve + HTTPS GET)
-appctl probe network --json
+actsim probe network --json
 ```
 
 ### run-scenario
@@ -86,8 +86,8 @@ steps:
 ```
 
 ```bash
-appctl run-scenario scenario.yaml --json
-appctl run-scenario scenario.yaml --artifacts /tmp/artifacts
+actsim run-scenario scenario.yaml --json
+actsim run-scenario scenario.yaml --artifacts /tmp/artifacts
 ```
 
 ### serve
@@ -96,7 +96,7 @@ Start the axum HTTP API. Host/port default from config
 (`APP__SERVER__HOST` / `APP__SERVER__PORT`) and can be overridden with flags.
 
 ```bash
-appctl serve --host 0.0.0.0 --port 8080
+actsim serve --host 0.0.0.0 --port 8080
 ```
 
 Routes (versioned under `/api/v1`, auto-derived from the registry):

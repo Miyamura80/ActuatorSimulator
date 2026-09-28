@@ -3,6 +3,32 @@
 version = 4
 
 [[package]]
+name = "actsim"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "app-config",
+ "axum",
+ "clap",
+ "comfy-table",
+ "dialoguer",
+ "engine",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "tokio",
+ "toml_edit",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -81,32 +107,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
-]
-
-[[package]]
-name = "appctl"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "app-config",
- "axum",
- "clap",
- "comfy-table",
- "dialoguer",
- "engine",
- "rustls",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "tokio",
- "toml_edit",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "walkdir",
 ]
 
 [[package]]

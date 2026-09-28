@@ -50,7 +50,7 @@ enum Command {
         /// Optional creative suggestion for the wordmark
         #[arg(long)]
         suggestion: Option<String>,
-        /// Where to write assets (defaults to docs/public)
+        /// Where to write assets (defaults to frontend/public)
         #[arg(long)]
         output_dir: Option<PathBuf>,
     },
@@ -66,7 +66,7 @@ enum Command {
         #[arg(long)]
         output_dir: Option<PathBuf>,
         /// Path to an icon/logo image to incorporate into the banner.
-        /// If omitted, falls back to docs/public/icon-light.png when it exists.
+        /// If omitted, falls back to frontend/public/icon-light.png when it exists.
         #[arg(long)]
         icon: Option<PathBuf>,
     },
@@ -107,9 +107,9 @@ async fn run_logo(
         Some(name) => name,
         None => read_project_name(&workspace)
             .await
-            .unwrap_or_else(|_| "Rust-Template".into()),
+            .unwrap_or_else(|_| "ActuatorSimulator".into()),
     };
-    let target = output_dir.unwrap_or_else(|| workspace.join("docs").join("public"));
+    let target = output_dir.unwrap_or_else(|| workspace.join("frontend").join("public"));
     tokio::fs::create_dir_all(&target)
         .await
         .context("Failed to create output directory")?;
@@ -170,7 +170,7 @@ async fn run_logo(
     save_png(&icon_dark_512, &target.join("icon-dark.png"))?;
     save_ico(&favicon_32, &target.join("favicon.ico"))?;
 
-    // Also emit a 1024x1024 source icon (useful for docs / social cards).
+    // Also emit a 1024x1024 source icon (useful for social cards).
     let icon_1024 = resize(&icon_light_square, 1024, 1024, FilterType::Lanczos3);
     save_png(&icon_1024, &target.join("icon-1024.png"))?;
 
@@ -190,17 +190,20 @@ async fn run_banner(
         Some(t) => t,
         None => read_project_name(&workspace)
             .await
-            .unwrap_or_else(|_| "Rust-Template".into()),
+            .unwrap_or_else(|_| "ActuatorSimulator".into()),
     };
     let target = output_dir.unwrap_or_else(|| workspace.join("media"));
     tokio::fs::create_dir_all(&target)
         .await
         .context("Failed to create banner output directory")?;
 
-    // Try to load an icon image: explicit --icon flag, or fall back to docs/public/icon-light.png
+    // Try to load an icon image: explicit --icon flag, or fall back to frontend/public/icon-light.png
     let explicit_icon = icon.is_some();
     let icon_path = icon.or_else(|| {
-        let default = workspace.join("docs").join("public").join("icon-light.png");
+        let default = workspace
+            .join("frontend")
+            .join("public")
+            .join("icon-light.png");
         default.exists().then_some(default)
     });
     let icon_image = match &icon_path {

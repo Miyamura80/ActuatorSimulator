@@ -1,11 +1,9 @@
 {
-	"name": "rust-template",
+	"name": "actuatorsimulator",
 	"private": true,
 	"version": "0.1.0",
 	"type": "module",
-	"workspaces": [
-		"docs"
-	],
+	"workspaces": [],
 	"scripts": {
 		"dev": "vite frontend",
 		"build": "tsc && vite build frontend",
