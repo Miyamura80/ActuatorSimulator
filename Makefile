@@ -36,8 +36,8 @@ help: ## Show this help message
 ### App
 .PHONY: run build build-release dev
 
-run: ## Run the HTTP API server (appctl serve)
-	cargo run -p appctl -- serve
+run: ## Run the HTTP API server (actsim serve)
+	cargo run -p actsim -- serve
 
 build: ## Build the whole workspace (debug)
 	cargo build --workspace
@@ -47,11 +47,6 @@ build-release: ## Build the whole workspace (release)
 
 dev: ## Run the optional frontend in development mode
 	bun run dev
-
-docs: ## Run docs with bun
-	@echo "$(GREEN)📚Running docs...$(RESET)"
-	@cd docs && bun run dev
-	@echo "$(GREEN)✅ Docs run completed.$(RESET)"
 
 
 ########################################################
@@ -81,8 +76,8 @@ setup: ## Set up dev environment from scratch (installs deps, copies .env, check
 	fi
 	@echo "$(GREEN)✅ Setup complete. Run 'make run' to start the server.$(RESET)"
 
-init: ## Onboard the template into a real project (appctl init). Bare = wizard; PROFILE=/CONFIG=/DRY_RUN=1/ARGS= for headless.
-	@cargo run -q -p appctl -- init \
+init: ## Onboard the template into a real project (actsim init). Bare = wizard; PROFILE=/CONFIG=/DRY_RUN=1/ARGS= for headless.
+	@cargo run -q -p actsim -- init \
 		$(if $(PROFILE),--profile $(PROFILE),) \
 		$(if $(CONFIG),--config $(CONFIG),) \
 		$(if $(DRY_RUN),--dry-run,) \
@@ -94,7 +89,7 @@ new: ## Scaffold a new engine command (usage: make new name=fetch_url [descripti
 		echo "Usage: make new name=<command_name> [description=\"...\"]"; \
 		exit 1; \
 	fi
-	@cargo run -q -p appctl -- new $(name) $(if $(description),--description "$(description)",)
+	@cargo run -q -p actsim -- new $(name) $(if $(description),--description "$(description)",)
 
 ### Asset Generation
 .PHONY: banner logo
@@ -107,7 +102,7 @@ banner: ## Generate project banner image (requires APP__GEMINI_API_KEY)
 logo: ## Generate logo, icons, and favicon (requires APP__GEMINI_API_KEY)
 	@echo "$(YELLOW)🔍Generating logo and favicon...$(RESET)"
 	@cargo run -p assetgen --bin asset-gen -- logo
-	@echo "$(GREEN)✅Logo assets saved to docs/public/$(RESET)"
+	@echo "$(GREEN)✅Logo assets saved to frontend/public/$(RESET)"
 
 
 
@@ -182,12 +177,10 @@ audit: ## Audit dependencies for vulnerabilities
 link-check: ## Check for broken links in markdown files
 	@echo "$(YELLOW)🔍 Checking links...$(RESET)"
 	@if command -v lychee > /dev/null 2>&1; then \
-		lychee .; \
+		lychee . && echo "$(GREEN)✅ Link check completed.$(RESET)"; \
 	else \
-		echo "$(YELLOW)⚠️ lychee not installed. Falling back to docs lint script...$(RESET)"; \
-		cd docs && bun run lint:links; \
+		echo "$(YELLOW)⚠️ lychee not installed; link check SKIPPED (CI runs it). Install: cargo install lychee$(RESET)"; \
 	fi
-	@echo "$(GREEN)✅ Link check completed.$(RESET)"
 
 file_len_check: ## Check TS/RS files don't exceed max line count
 	@echo "$(YELLOW)🔍 Checking file lengths...$(RESET)"

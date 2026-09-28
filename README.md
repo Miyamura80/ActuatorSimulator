@@ -1,4 +1,4 @@
-# Rust-Template
+# ActuatorSimulator
 
 <p align="center">
   <img src="media/banner.png" alt="banner" width="400">
@@ -19,8 +19,8 @@
 
 <p align="center">
   <img alt="Rust Version" src="https://img.shields.io/badge/rust-1.75%2B-blue?logo=rust">
-  <img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/Miyamura80/Rust-Template">
-  <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Miyamura80/Rust-Template/rust_checks.yaml?branch=main">
+  <img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/Miyamura80/ActuatorSimulator">
+  <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Miyamura80/ActuatorSimulator/rust_checks.yaml?branch=main">
 </p>
 
 ---
@@ -35,7 +35,7 @@ the API over `fetch`.
 | Feature | Tech Stack |
 |---------|:----------:|
 | **Core** | `engine` crate - typed async `Command` registry (no transport deps) |
-| **CLI + API** | `appctl` binary - `call` / `serve` / `doctor` / `probe` / `run-scenario` |
+| **CLI + API** | `actsim` binary - `call` / `serve` / `doctor` / `probe` / `run-scenario` |
 | **HTTP API** | `axum` + `tower` (CORS, tracing, timeout, request-id) |
 | **Contract** | `schemars` JSON Schema shared across CLI, API, and future MCP |
 | **Config** | `app-config` crate (YAML + `APP__` env overrides + sanitizer) |
@@ -49,12 +49,12 @@ the API over `fetch`.
 
 ```
         ┌────────────────────────────────────────────────────────────┐
-        │  TRANSPORTS  (crates/cli - one binary `appctl`, subcommands) │
+        │  TRANSPORTS  (crates/cli - one binary `actsim`, subcommands) │
         │                                                              │
-        │   appctl call <cmd> --args '{...}'   one-shot JSON I/O       │
-        │   appctl serve --port 8080           axum HTTP API           │
-        │   appctl doctor | probe | run-scenario                       │
-        │   appctl mcp                          (stub - see docs/mcp.md)│
+        │   actsim call <cmd> --args '{...}'   one-shot JSON I/O       │
+        │   actsim serve --port 8080           axum HTTP API           │
+        │   actsim doctor | probe | run-scenario                       │
+        │   actsim mcp                          (stub - see docs/mcp.md)│
         └───────────────┬─────────────────────────┬───────────────────┘
                         │                          │
         optional bun/React frontend               │  same registry
@@ -76,8 +76,8 @@ the API over `fetch`.
 
 - `crates/engine/` - all real logic; a typed, async `Command` registry with
   self-registration (`inventory`). No CLI/HTTP dependency.
-- `crates/cli/` - the `appctl` binary. The `cli` and `http-api` surfaces are
-  cargo features (both on by default) so `appctl init` can prune one.
+- `crates/cli/` - the `actsim` binary. The `cli` and `http-api` surfaces are
+  cargo features (both on by default) so `actsim init` can prune one.
 - `crates/config/` - `AppConfig` (with secrets) vs the sanitized
   `FrontendConfig` served over HTTP. The sanitizer is a security boundary.
 - `crates/assetgen/` - `asset-gen` binary for `make banner` / `make logo`.
@@ -96,18 +96,18 @@ cargo build --workspace
 cargo test --workspace
 
 # 3. Run the HTTP API
-make run                    # = appctl serve   (GET /healthz, /api/v1/commands)
+make run                    # = actsim serve   (GET /healthz, /api/v1/commands)
 
 # 4. Call a command headlessly
-cargo run -p appctl -- call ping --json
-cargo run -p appctl -- call read_file --args '{"path": "/etc/hostname"}' --json
+cargo run -p actsim -- call ping --json
+cargo run -p actsim -- call read_file --args '{"path": "/etc/hostname"}' --json
 
 # 5. (optional) Run the frontend against the API
 bun install
-make dev                    # Vite dev server; /api is proxied to appctl serve
+make dev                    # Vite dev server; /api is proxied to actsim serve
 ```
 
-Scaffold a new command with `make new name=fetch_url` (or `appctl new
+Scaffold a new command with `make new name=fetch_url` (or `actsim new
 fetch_url`) - it self-registers, so it's immediately callable over the CLI and
 the API.
 
@@ -115,7 +115,7 @@ the API.
 
 - `make logo` / `make banner` regenerate branding assets via the Rust
   `asset-gen` CLI (requires `APP__GEMINI_API_KEY`, set via `.env`).
-- Logos/icons land under `docs/public/`, the banner under `media/banner.png`.
+- Logos/icons land under `frontend/public/`, the banner under `media/banner.png`.
 
 ## Configuration
 
@@ -152,8 +152,8 @@ This software uses the following tools:
 
 ## About the Core Contributors
 
-<a href="https://github.com/Miyamura80/Rust-Template/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Miyamura80/Rust-Template" />
+<a href="https://github.com/Miyamura80/ActuatorSimulator/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Miyamura80/ActuatorSimulator" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
