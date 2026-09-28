@@ -177,11 +177,10 @@ audit: ## Audit dependencies for vulnerabilities
 link-check: ## Check for broken links in markdown files
 	@echo "$(YELLOW)🔍 Checking links...$(RESET)"
 	@if command -v lychee > /dev/null 2>&1; then \
-		lychee .; \
+		lychee . && echo "$(GREEN)✅ Link check completed.$(RESET)"; \
 	else \
-		echo "$(YELLOW)⚠️ lychee not installed. Skipping link check.$(RESET)"; \
+		echo "$(YELLOW)⚠️ lychee not installed; link check SKIPPED (CI runs it). Install: cargo install lychee$(RESET)"; \
 	fi
-	@echo "$(GREEN)✅ Link check completed.$(RESET)"
 
 file_len_check: ## Check TS/RS files don't exceed max line count
 	@echo "$(YELLOW)🔍 Checking file lengths...$(RESET)"

@@ -115,7 +115,7 @@ the API.
 
 - `make logo` / `make banner` regenerate branding assets via the Rust
   `asset-gen` CLI (requires `APP__GEMINI_API_KEY`, set via `.env`).
-- Logos/icons land under `docs/public/`, the banner under `media/banner.png`.
+- Logos/icons land under `frontend/public/`, the banner under `media/banner.png`.
 
 ## Configuration
 
