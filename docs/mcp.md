@@ -40,10 +40,14 @@ protocol envelope.
    `input_schema`. (The `Expose::mcp` flag already exists to hide CLI-only
    utility commands from the tool surface, mirroring the reference template's
    exclusion set.)
-3. `tools/call`: deserialize the tool arguments as the command `Input`, run
-   `registry.call(name, args, &ctx)`, and return the bare `Output` as the tool
-   result. Errors map from `CommandError::error_code()` to MCP error responses,
-   the same mapping `serve_http.rs` uses for HTTP status codes.
+3. `tools/call`: pass the tool `arguments` through as a JSON `Value` to
+   `registry.call(name, args, &ctx)`; the registry deserializes the
+   command-specific `Input` itself. Wrap the returned `Value` in an MCP
+   `CallToolResult` (`structuredContent` = the output, plus a `text` content
+   block holding the same JSON). A `CommandError` becomes a `CallToolResult`
+   with `isError: true` carrying `CommandError::error_code()` and the message,
+   the same codes `serve_http.rs` maps to HTTP statuses; an unknown tool name
+   is a protocol-level error.
 4. Mount it in the same process as `actsim serve` (the HTTP router is already
    shaped to nest a `/mcp` sub-router), or run it standalone over stdio for
    local tool clients.
