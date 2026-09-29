@@ -199,7 +199,7 @@ impl GameState {
             created: self.tick,
             status,
         });
-        if status == LotStatus::Available {
+        if status == LotStatus::Available && qty > 0 {
             self.stock.entry(item).or_default().push_back(id);
         }
         id

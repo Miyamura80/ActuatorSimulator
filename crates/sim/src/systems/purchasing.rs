@@ -32,6 +32,9 @@ pub fn place_order(
         s.unit_price
     };
     let cost = qty as i64 * unit_price;
+    if state.cash - cost < -state.tuning.overdraft_limit {
+        return Err(format!("not enough cash or credit for ${cost}"));
+    }
     let lead_days = if expedite {
         s.lead_days.div_ceil(3)
     } else {

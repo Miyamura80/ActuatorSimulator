@@ -53,6 +53,11 @@ impl GameState {
     }
 
     pub fn run_days(&mut self, days: u32) {
-        self.run_hours(days * TICKS_PER_DAY);
+        for _ in 0..days {
+            if self.is_over() {
+                break;
+            }
+            self.run_hours(TICKS_PER_DAY);
+        }
     }
 }

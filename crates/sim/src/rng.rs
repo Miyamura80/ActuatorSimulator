@@ -59,7 +59,14 @@ impl Rng {
             return lo;
         }
         let span = (hi - lo) as u64 + 1;
-        lo + (self.next_u64() % span) as u32
+        // Rejection sampling avoids modulo bias.
+        let cutoff = u64::MAX - u64::MAX % span;
+        loop {
+            let draw = self.next_u64();
+            if draw < cutoff {
+                return lo + (draw % span) as u32;
+            }
+        }
     }
 
     /// Uniform float in `[lo, hi)`.

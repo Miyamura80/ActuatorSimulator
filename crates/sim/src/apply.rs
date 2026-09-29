@@ -2,7 +2,8 @@
 
 use crate::action::{Action, ActionError};
 use crate::event::{EventKind, Severity};
-use crate::model::{Machine, MachineId};
+use crate::model::{ContractStatus, Machine, MachineId};
+use crate::policy::InspectionPlan;
 use crate::state::GameState;
 use crate::systems::{contracts, purchasing};
 
@@ -51,10 +52,12 @@ impl GameState {
                 if !item.is_purchased() {
                     return Err("IQC applies to purchased parts only".into());
                 }
+                validate_plan(plan)?;
                 self.policies.iqc.insert(item, plan);
                 Ok(())
             }
             Action::SetEol { plan } => {
+                validate_plan(plan)?;
                 self.policies.eol = plan;
                 Ok(())
             }
@@ -125,9 +128,26 @@ impl GameState {
             Action::AcceptContract { contract } => contracts::accept(self, contract),
             Action::DeclineContract { contract } => contracts::decline(self, contract),
             Action::ShipNow { contract } => {
+                let c = self
+                    .contracts
+                    .iter()
+                    .find(|c| c.id == contract)
+                    .ok_or("unknown contract")?;
+                if c.status != ContractStatus::Active {
+                    return Err("contract is not active".into());
+                }
                 contracts::ship(self, contract);
                 Ok(())
             }
         }
+    }
+}
+
+fn validate_plan(plan: InspectionPlan) -> Result<(), String> {
+    match plan {
+        InspectionPlan::Sample { percent } if !(1..=100).contains(&percent) => {
+            Err("sample percent must be 1..=100".into())
+        }
+        _ => Ok(()),
     }
 }

@@ -9,7 +9,7 @@ const MAX_OFFERS: usize = 4;
 const OFFER_LIFETIME_DAYS: u32 = 3;
 /// Hour of day finished goods ship.
 const SHIP_HOUR: u32 = 17;
-/// A contract this many days past deadline is cancelled by the customer.
+/// On this many days past deadline the customer cancels the contract.
 const FAIL_AFTER_LATE_DAYS: u32 = 10;
 const BASE_UNIT_PRICE: f64 = 520.0;
 
@@ -94,9 +94,16 @@ pub fn accept(state: &mut GameState, id: ContractId) -> Result<(), String> {
     if c.status != ContractStatus::Offered {
         return Err("contract is not on offer".into());
     }
+    if c.offer_expires <= now {
+        c.status = ContractStatus::Expired;
+        return Err("offer has expired".into());
+    }
     c.status = ContractStatus::Active;
     c.deadline = Some(now + c.lead_days * TICKS_PER_DAY);
-    let msg = format!("Accepted {} x{} for {}", c.qty, c.unit_price, c.customer);
+    let msg = format!(
+        "Accepted {} units at ${} for {}",
+        c.qty, c.unit_price, c.customer
+    );
     state.emit(
         Severity::Info,
         msg,
@@ -235,7 +242,7 @@ fn complete_if_done(state: &mut GameState, id: ContractId) {
         EventKind::ContractCompleted {
             contract: id,
             on_time,
-            reputation: gain,
+            reputation_gain: gain,
         },
     );
 }
@@ -257,7 +264,7 @@ fn check_deadlines(state: &mut GameState) {
         })
         .collect();
     for (id, days_late, penalty) in late {
-        if days_late > FAIL_AFTER_LATE_DAYS {
+        if days_late >= FAIL_AFTER_LATE_DAYS {
             if let Some(c) = state.contract_mut(id) {
                 c.status = ContractStatus::Failed;
             }

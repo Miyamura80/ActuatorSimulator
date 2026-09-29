@@ -30,11 +30,9 @@ pub fn tick(state: &mut GameState) {
         if operating {
             run_station(state, idx);
         } else {
-            let st = &mut state.stations[idx];
-            st.busy = false;
-            st.progress = 0.0;
+            state.stations[idx].busy = false;
         }
-        close_lot_if_due(state, idx, operating);
+        close_lot_if_due(state, idx);
     }
 }
 
@@ -224,7 +222,7 @@ fn add_to_open_lot(
     state.stations[idx].units_built += 1;
 }
 
-fn close_lot_if_due(state: &mut GameState, idx: usize, operating: bool) {
+fn close_lot_if_due(state: &mut GameState, idx: usize) {
     let Some(lot_id) = state.stations[idx].open_lot else {
         return;
     };
@@ -232,7 +230,7 @@ fn close_lot_if_due(state: &mut GameState, idx: usize, operating: bool) {
     let lot = state.lot(lot_id);
     let full = lot.qty >= lot_size;
     let old = state.tick.saturating_sub(lot.created) >= MAX_LOT_AGE;
-    if full || old || !operating {
+    if full || old {
         state.stations[idx].open_lot = None;
         state.release_lot(lot_id);
     }

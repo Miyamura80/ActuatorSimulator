@@ -75,7 +75,7 @@ pub enum EventKind {
     ContractCompleted {
         contract: ContractId,
         on_time: bool,
-        reputation: f64,
+        reputation_gain: f64,
     },
     ContractLate {
         contract: ContractId,

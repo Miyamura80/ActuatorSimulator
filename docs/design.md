@@ -77,7 +77,8 @@ Detection points:
 
 - **Incoming inspection (IQC)**, per purchased part: none, sample, or 100%.
   A sample that finds more than the acceptance number rejects the lot (return to
-  supplier, refund). 100% inspection sorts out every detectable defect at a cost.
+  supplier, refund). 100% inspection sorts out the defects it finds (inspectors
+  catch 95%) at a per-unit cost, so a few still slip through.
 - **End-of-line test (EOL)**: 100% or sample. A failing unit is scrapped.
   Sampling saves test bench capacity at the risk of escapes.
 
@@ -117,7 +118,7 @@ frequency, machine wear, and contract strictness: Easy / Normal / Hard.
 | # | Milestone |
 |---|---|
 | M1 | Sim core: state, lots, suppliers, stations, contracts, economy, `actsim` headless runs |
-| M2 | Failure systems + difficulty presets |
+| M2 | Failure systems (supplier events, breakdowns, RMAs) + difficulty balance tuning |
 | M3 | WASM bridge + save/load |
 | M4 | 3D factory floor (stylized industrial) |
 | M5 | Game UI: HUD, contracts, policy knobs, incident cards, stats (SPC, Pareto, cash) |
@@ -155,9 +156,9 @@ M1 baseline, autopilot, 20 seeds x 90 days:
 
 | Difficulty | Survived | Mean cash | Scrap rate |
 |---|---|---|---|
-| Easy | 20/20 | 5.6M | 7.7% |
-| Normal | 18/20 | 2.1M | 9.4% |
-| Hard | 19/20 | 78k | 11.4% |
+| Easy | 20/20 | 5.7M | 7.7% |
+| Normal | 20/20 | 2.4M | 9.6% |
+| Hard | 20/20 | 109k | 11.1% |
 
 - Easy/Normal snowball once a few machines are bought; needs cost pressure
   (maintenance, breakdowns, RMAs from M2) and a softer contract size curve.

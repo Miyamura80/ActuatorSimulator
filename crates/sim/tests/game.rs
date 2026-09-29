@@ -168,9 +168,55 @@ fn orders_arrive_eventually() {
     })
     .unwrap();
     s.run_days(20);
+    // Lead time plus the worst late delay is under 14 days, so every order
+    // placed at least that long ago must have arrived.
+    let settled = s.tick.saturating_sub(14 * 24);
+    assert!(s.orders.iter().any(|o| o.placed <= settled));
+    for o in s.orders.iter().filter(|o| o.placed <= settled) {
+        assert_eq!(o.status, OrderStatus::Received, "order {:?}", o.id);
+    }
+}
+
+#[test]
+fn invalid_actions_are_rejected() {
+    let mut s = GameState::new(2, Difficulty::Normal);
+    let bad = InspectionPlan::Sample { percent: 0 };
+    assert!(s.apply(Action::SetEol { plan: bad }).is_err());
     assert!(s
-        .orders
-        .iter()
-        .all(|o| o.status == OrderStatus::Received || o.placed > 0));
-    assert_eq!(s.orders[0].status, OrderStatus::Received);
+        .apply(Action::SetIqc {
+            item: Item::Magnets,
+            plan: bad
+        })
+        .is_err());
+    let offer = s.contracts[0].id;
+    // Not accepted yet, so it cannot ship.
+    assert!(s.apply(Action::ShipNow { contract: offer }).is_err());
+    assert!(s
+        .apply(Action::ShipNow {
+            contract: sim::model::ContractId(9999)
+        })
+        .is_err());
+}
+
+#[test]
+fn expired_offer_cannot_be_accepted() {
+    let mut s = GameState::new(2, Difficulty::Normal);
+    let offer = s.contracts[0].id;
+    // Park the clock on the expiry tick before the hour-0 sweep runs.
+    s.tick = s.contracts[0].offer_expires;
+    assert!(s.apply(Action::AcceptContract { contract: offer }).is_err());
+    assert_eq!(s.contracts[0].status, ContractStatus::Expired);
+}
+
+#[test]
+fn orders_beyond_credit_are_refused() {
+    let mut s = GameState::new(2, Difficulty::Hard);
+    let supplier = s.suppliers[0].id;
+    let order = Action::PlaceOrder {
+        supplier,
+        qty: 1_000_000,
+        expedite: false,
+    };
+    assert!(s.apply(order).is_err());
+    assert!(s.orders.is_empty());
 }
