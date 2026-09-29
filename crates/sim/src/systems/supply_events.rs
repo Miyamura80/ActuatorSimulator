@@ -38,7 +38,14 @@ pub fn tick(state: &mut GameState) {
             Tier::Budget => BANKRUPT_ODDS_BUDGET,
             _ => BANKRUPT_ODDS_OTHER,
         };
-        if state.day() >= BANKRUPT_GRACE_DAYS && state.rng.chance(odds * mult) {
+        // The last active supplier of a part never folds: the game must stay winnable.
+        let item = state.suppliers[i].item;
+        let alternatives = state
+            .suppliers
+            .iter()
+            .filter(|s| s.item == item && s.active)
+            .count();
+        if state.day() >= BANKRUPT_GRACE_DAYS && alternatives > 1 && state.rng.chance(odds * mult) {
             bankrupt(state, i);
         }
     }

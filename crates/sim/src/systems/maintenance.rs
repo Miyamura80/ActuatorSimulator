@@ -21,6 +21,8 @@ const REPAIR_CONDITION: f64 = 70.0;
 const SPC_SUBGROUP: f64 = 5.0;
 /// Run rule: this many consecutive points on one side of center.
 const SPC_RUN_LENGTH: usize = 9;
+/// Take an SPC sample every this many hours.
+const SPC_EVERY_HOURS: u32 = 3;
 /// An alarm clears itself after this many in-control points in a row.
 const SPC_CLEAR_AFTER: usize = 12;
 
@@ -184,7 +186,7 @@ fn roll_drift(state: &mut GameState, idx: usize) {
         return;
     }
     let wear = 1.0 - condition / 100.0;
-    let walk = state.rng.normal(0.0, 0.04 * (1.0 + wear));
+    let walk = state.rng.normal(0.0, 0.01 * (1.0 + wear));
     let odds = TOOL_BREAK_BASE * (1.0 + 3.0 * wear) * state.tuning.breakdown_mult;
     let broke = state.rng.chance(odds);
     let jump = if broke {
@@ -205,17 +207,17 @@ fn roll_drift(state: &mut GameState, idx: usize) {
     };
 }
 
-/// Record one x-bar point and evaluate the SPC rules. Alarms are edge
+/// Every few hours, record one x-bar point and evaluate the SPC rules. Alarms are edge
 /// triggered so the log gets one entry per excursion.
 fn sample_spc(state: &mut GameState, idx: usize) {
-    if !state.stations[idx].busy {
+    if !state.stations[idx].busy || !state.tick.is_multiple_of(SPC_EVERY_HOURS) {
         return;
     }
     let condition = {
         let ms = &state.stations[idx].machines;
         ms.iter().map(|m| m.condition).sum::<f64>() / ms.len() as f64
     };
-    let sigma = 1.0 + 0.5 * (1.0 - condition / 100.0);
+    let sigma = 1.0 + 0.2 * (1.0 - condition / 100.0);
     let drift = state.stations[idx].drift;
     let xbar = state.rng.normal(drift, sigma / SPC_SUBGROUP.sqrt());
     let st = &mut state.stations[idx];

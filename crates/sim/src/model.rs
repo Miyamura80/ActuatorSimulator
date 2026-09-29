@@ -179,7 +179,7 @@ pub struct Station {
     pub starved_on: Option<Item>,
     /// Hidden process mean shift in sigma units (tool wear, breakage).
     pub drift: f64,
-    /// Hourly x-bar samples (subgroup of 5), newest last, in sigma units.
+    /// X-bar samples (subgroup of 5, every 3 hours), newest last, in sigma units.
     pub spc: VecDeque<f64>,
     /// An SPC rule is currently violated.
     pub spc_alarm: bool,

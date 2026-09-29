@@ -152,17 +152,17 @@ frequency, machine wear, and contract strictness: Easy / Normal / Hard.
 
 - **M2 failure systems** (all odds scale with difficulty):
   - Supplier events, rolled daily per supplier: silent bad lots (defect rate
-    x6 to x15, found at IQC, on the line or in the field), price spikes
+    x10 to x25, at least 8%, found at IQC, on the line or in the field), price spikes
     (+25 to 60% for 1 to 3 weeks), bankruptcy after day 20 (budget shops far
-    more often; prepaid open orders are lost and reorders move to the cheapest
+    more often, never the last supplier of a part; prepaid open orders are lost and reorders move to the cheapest
     remaining supplier).
   - Equipment: breakdown hazard rises with wear (6 to 30 h repair, 6% of
     machine price). Preventive maintenance every 120 operating hours by default
     (3 h, 1.5% of price) restores condition and re-centers the process.
   - Process drift: a hidden mean shift (random walk plus tool breaks of 1.5 to 3
-    sigma) multiplies process defects by exp(drift^2/2). Each station logs an
-    hourly x-bar point (n=5); a point beyond 3 sigma or 9 on one side raises an
-    SPC alarm. On the EOL bench, drift lowers test coverage instead.
+    sigma) multiplies process defects by exp(drift^2/2). Every 3 hours each
+    busy station logs an x-bar point (n=5); a point beyond 3 sigma or 9 in a row
+    on one side raises an SPC alarm. On the EOL bench, drift lowers test coverage instead.
   - Field: escaped detectable defects fail 1 to 4 days after shipping (DOA),
     latent ones 10 to 60 days after. Each RMA costs $420 (x2 premium) and 0.3
     rep (x2 premium). `Recall(lot)` traces genealogy forward, recalls shipped
@@ -186,9 +186,13 @@ After M2 (autopilot, 90 days; 30 seeds for Normal/Hard, 20 for Easy):
 
 | Difficulty | Survived | Mean cash | Scrap | Field failures | Breakdowns/run |
 |---|---|---|---|---|---|
-| Easy | 20/20 | 5.5M | 6.0% | 1.2% | 28 |
-| Normal | 28/30 | 1.3M | 8.6% | 1.6% | 35 |
-| Hard | 16/30 | 36k | 13.3% | 2.3% | 13 |
+| Easy | 20/20 | 5.3M | 5.7% | 1.1% | 28 |
+| Normal | 28/30 | 1.3M | 8.1% | 1.2% | 36 |
+| Hard | 10/30 | 2k | 15.9% | 2.4% | 10 |
+
+- Hard is brutal for the autopilot because it never changes suppliers or
+  tightens IQC after a bad lot; a human reacting to events should do far
+  better. Check once the UI exists.
 
 - Field failure rate (1 to 2% of shipped units) is dominated by latent
   defects, which the EOL test cannot catch. Premium suppliers and PM are the
