@@ -18,6 +18,7 @@ make run                # Run the HTTP API server (= actsim serve)
 cargo test --workspace  # Run Rust tests
 cargo clippy --workspace --all-targets -- -D warnings
 actsim call ping --json # Invoke a command headlessly
+actsim call sim_run --args '{"seeds":20,"days":90}' --json  # Autopilot balance sweep
 make new name=fetch_url # Scaffold a new engine command
 make init PROFILE=... DRY_RUN=1  # Onboard the template into a real project
 make dev                # Optional frontend: Vite dev server, /api → actsim serve
@@ -25,6 +26,9 @@ make dev                # Optional frontend: Vite dev server, /api → actsim se
 
 ## Architecture
 
+- **crates/sim/** - the game simulation: pure, deterministic, synchronous Rust
+  (no IO, no tokio) so it compiles to WASM for the browser. `GameState::new(seed,
+  difficulty)` / `apply(Action)` / `step()`. Game design: [`docs/design.md`](docs/design.md).
 - **crates/engine/** - typed async `Command` registry with `inventory`
   self-registration; per-request `Ctx`; capability traits. No transport deps.
 - **crates/cli/** - the `actsim` binary; `cli` and `http-api` are cargo features
