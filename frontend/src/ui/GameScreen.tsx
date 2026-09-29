@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { beaconState } from "../floor/status";
 import type { StationKind } from "../sim/types";
 import { useGame } from "../sim/useGame";
 import type { Sim } from "../sim/wasm";
@@ -27,6 +28,15 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	useEffect(() => {
 		if (bankrupt) exitRef.current?.focus();
 	}, [bankrupt]);
+
+	// Closing a card hands focus back to that station's strip button.
+	const closeCard = () => {
+		const kind = selected;
+		setSelected(null);
+		document
+			.querySelector<HTMLButtonElement>(`[data-station="${kind}"]`)
+			?.focus();
+	};
 
 	const save = async () => {
 		const name = `Day ${view.day + 1} · ${view.difficulty}`;
@@ -60,11 +70,29 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 						</Suspense>
 						{selected && (
 							<StationCard
+								key={selected}
 								game={game}
 								kind={selected}
-								onClose={() => setSelected(null)}
+								onClose={closeCard}
 							/>
 						)}
+						{/* Keyboard and screen-reader route to every station. */}
+						<nav className="station-strip" aria-label="Stations">
+							{view.stations.map((st) => (
+								<button
+									type="button"
+									key={st.kind}
+									data-station={st.kind}
+									aria-pressed={selected === st.kind}
+									className={`strip-btn beacon-${beaconState(st, view.operating)}${selected === st.kind ? " on" : ""}`}
+									onClick={() =>
+										setSelected(selected === st.kind ? null : st.kind)
+									}
+								>
+									{st.label}
+								</button>
+							))}
+						</nav>
 					</section>
 					<Contracts game={game} />
 					<EventLog events={game.events} />

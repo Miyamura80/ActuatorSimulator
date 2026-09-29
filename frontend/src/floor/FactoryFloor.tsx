@@ -22,13 +22,33 @@ const VIEW_WIDTH = 35;
 const VIEW_HEIGHT = 19;
 
 /** Fit the whole plant on screen whenever the canvas is resized. */
+/** Zoom that fits the whole plant in a canvas of this size. */
+function fitZoom(width: number, height: number) {
+	return Math.min(width / VIEW_WIDTH, height / VIEW_HEIGHT);
+}
+
 function FitCamera() {
 	const { camera, size } = useThree();
 	useEffect(() => {
-		camera.zoom = Math.min(size.width / VIEW_WIDTH, size.height / VIEW_HEIGHT);
+		camera.zoom = fitZoom(size.width, size.height);
 		camera.updateProjectionMatrix();
 	}, [camera, size.width, size.height]);
 	return null;
+}
+
+/** Orbit controls that can always zoom back out to the fitted view. */
+function Controls() {
+	const { size } = useThree();
+	return (
+		<OrbitControls
+			target={[1.5, 0, -0.5]}
+			enableRotate
+			minPolarAngle={0.5}
+			maxPolarAngle={1.1}
+			minZoom={Math.min(16, fitZoom(size.width, size.height))}
+			maxZoom={80}
+		/>
+	);
 }
 
 function Floor() {
@@ -128,11 +148,7 @@ interface Props {
 
 export function FactoryFloor({ view, selected, onSelect }: Props) {
 	const byKind = new Map(view.stations.map((s) => [s.kind, s]));
-	const isBusy = (c: Conveyor) => {
-		if (!c.driver) return view.operating;
-		const st = byKind.get(c.driver);
-		return Boolean(st?.busy);
-	};
+	const isBusy = (c: Conveyor) => Boolean(byKind.get(c.driver)?.busy);
 	const labelRefs = useRef(new Map<string, HTMLDivElement>());
 	const labels: Label[] = [
 		...view.stations.map((st) => {
@@ -171,14 +187,7 @@ export function FactoryFloor({ view, selected, onSelect }: Props) {
 					near={-100}
 					far={200}
 				/>
-				<OrbitControls
-					target={[1.5, 0, -0.5]}
-					enableRotate
-					minPolarAngle={0.5}
-					maxPolarAngle={1.1}
-					minZoom={16}
-					maxZoom={80}
-				/>
+				<Controls />
 				<hemisphereLight args={["#dfe7ef", "#20242a", 0.9]} />
 				<directionalLight
 					position={[12, 20, 8]}

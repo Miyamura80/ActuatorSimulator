@@ -539,12 +539,33 @@ h2 {
 	position: absolute;
 	top: 12px;
 	left: 12px;
-	width: 300px;
+	width: min(300px, calc(100% - 24px));
 	background: rgb(27 31 35 / 0.95);
 	border: 1px solid var(--line);
 	border-top: 3px solid var(--hazard);
 	border-radius: 6px;
 	padding: 10px 12px;
+}
+.station-strip {
+	position: absolute;
+	z-index: 2;
+	left: 8px;
+	right: 8px;
+	bottom: 8px;
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+.strip-btn {
+	font-size: 13px;
+	padding: 4px 10px;
+	background: rgb(27 31 35 / 0.9);
+	border-left: 3px solid var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.strip-btn.on {
+	outline: 1px solid var(--hazard);
 }
 .station-card header {
 	display: flex;
@@ -570,7 +591,8 @@ h2 {
 }
 .station-card .machines li {
 	display: grid;
-	grid-template-columns: 80px auto 1fr;
+	grid-template-columns: max-content auto 1fr;
+	white-space: nowrap;
 	gap: 8px;
 	align-items: center;
 	font-size: 14px;

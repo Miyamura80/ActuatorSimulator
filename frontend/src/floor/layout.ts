@@ -29,8 +29,8 @@ export const BUFFER_OFFSET: Vec2 = [1.8, 1.4];
 
 export interface Conveyor {
 	id: string;
-	/** Station whose activity drives this belt (null: receiving). */
-	driver: StationKind | null;
+	/** Station whose activity drives this belt (its consumer or producer). */
+	driver: StationKind;
 	item: Item;
 	points: Vec2[];
 }
@@ -65,10 +65,33 @@ export const CONVEYORS: Conveyor[] = [
 		points: [[-12.5, 0.5], [-10, 2], inp("winding")],
 	},
 	{
+		id: "r-lam",
+		driver: "winding",
+		item: "laminations",
+		points: [[-12.5, 0.8], [-10.4, 1.4], [-10.4, 2.5], inp("winding")],
+	},
+	{
 		id: "r-smt",
 		driver: "smt",
 		item: "pcb_blank",
 		points: [[-12.5, 1], [-10, 6.5], inp("smt")],
+	},
+	{
+		id: "r-enc",
+		driver: "smt",
+		item: "encoder_ic",
+		points: [[-12.5, 1.2], [-10.4, 5.9], [-10.4, 7], inp("smt")],
+	},
+	{
+		id: "r-bearing",
+		driver: "motor_asm",
+		item: "bearing",
+		points: [
+			[-12.5, 1.8],
+			[-9.5, 4.9],
+			[-2.2, 4.9],
+			[-1, 2.9],
+		],
 	},
 	{
 		id: "r-motor",

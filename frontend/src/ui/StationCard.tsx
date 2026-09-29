@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { beaconState } from "../floor/status";
 import type { StationKind } from "../sim/types";
 import type { Game } from "../sim/useGame";
@@ -25,6 +25,10 @@ export function StationCard({
 }) {
 	const { view, act } = game;
 	const [error, setError] = useState<string | null>(null);
+	const closeRef = useRef<HTMLButtonElement>(null);
+	// A newly opened card takes focus so keyboard and screen-reader users land
+	// in it. (GameScreen keys the card by station, so errors reset too.)
+	useEffect(() => closeRef.current?.focus(), []);
 	const st = view.stations.find((s) => s.kind === kind);
 	if (!st) return null;
 	const state = beaconState(st, view.operating);
@@ -35,6 +39,7 @@ export function StationCard({
 				<strong>{st.label}</strong>
 				<span className={`pill beacon-${state}`}>{STATE_LABEL[state]}</span>
 				<button
+					ref={closeRef}
 					type="button"
 					className="ghost close"
 					onClick={onClose}
@@ -46,8 +51,10 @@ export function StationCard({
 			<ul className="machines">
 				{st.machines.map((m, i) => (
 					<li key={m.id}>
-						<span>Machine {i + 1}</span>
-						<span className="meter">
+						<span>
+							Machine {i + 1} · {Math.round(m.condition)}%
+						</span>
+						<span className="meter" aria-hidden="true">
 							<span style={{ width: `${m.condition}%` }} />
 						</span>
 						<span className="muted">
