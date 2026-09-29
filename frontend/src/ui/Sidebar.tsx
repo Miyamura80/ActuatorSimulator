@@ -71,6 +71,10 @@ export function Sidebar({ game, tab, setTab, traceLot, setTraceLot }: Props) {
 			<div
 				className="tab-body"
 				role="tabpanel"
+				// The WAI-ARIA tabs pattern makes the panel focusable so Tab reaches
+				// panels with no controls of their own (Stats, Log).
+				// biome-ignore lint/a11y/noNoninteractiveTabindex: tabpanel per APG
+				tabIndex={0}
 				id={`panel-${tab}`}
 				aria-labelledby={`tab-${tab}`}
 			>

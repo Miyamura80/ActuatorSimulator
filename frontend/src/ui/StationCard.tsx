@@ -29,6 +29,11 @@ export function StationCard({ game, kind, onClose }: Props) {
 	const [error, setError] = useState<string | null>(null);
 	// Selling is permanent and returns half the price: ask once first.
 	const [confirmSell, setConfirmSell] = useState(false);
+	const confirmRef = useRef<HTMLButtonElement>(null);
+	// The Sell button it replaces had focus; hand it to the confirmation.
+	useEffect(() => {
+		if (confirmSell) confirmRef.current?.focus();
+	}, [confirmSell]);
 	const closeRef = useRef<HTMLButtonElement>(null);
 	// A newly opened card takes focus so keyboard and screen-reader users land
 	// in it. (GameScreen keys the card by station, so errors reset too.)
@@ -139,6 +144,7 @@ export function StationCard({ game, kind, onClose }: Props) {
 				{confirmSell ? (
 					<>
 						<button
+							ref={confirmRef}
 							type="button"
 							className="danger"
 							onClick={() => {
