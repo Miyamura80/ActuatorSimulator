@@ -1,24 +1,35 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { beaconState } from "../floor/status";
 import type { StationKind } from "../sim/types";
-import { useGame } from "../sim/useGame";
+import { type Speed, useGame } from "../sim/useGame";
 import type { Sim } from "../sim/wasm";
-import { Contracts } from "./Contracts";
-import { EventLog } from "./EventLog";
 import { formatMoney } from "./format";
 import { Hud } from "./Hud";
+import { Sidebar, type Tab } from "./Sidebar";
 import { StationCard } from "./StationCard";
+import { Toasts } from "./Toasts";
 
 // three.js is the bulk of the bundle; load it after the menu.
 const FactoryFloor = lazy(() =>
 	import("../floor/FactoryFloor").then((m) => ({ default: m.FactoryFloor })),
 );
 
+const SPEED_KEYS: Record<string, Speed> = { "1": 1, "2": 2, "3": 4 };
+
 export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	const game = useGame(sim);
 	const [notice, setNotice] = useState<string | null>(null);
 	const [selected, setSelected] = useState<StationKind | null>(null);
-	const { view } = game;
+	const [tab, setTab] = useState<Tab>("contracts");
+	const [traceLot, setTraceLot] = useState<number | null>(null);
+	const { view, speed, setSpeed } = game;
 	const bankrupt = view.status.state === "bankrupt";
 	const exitRef = useRef<HTMLButtonElement>(null);
 	const noticeTimer = useRef<number | undefined>(undefined);
@@ -30,13 +41,47 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	}, [bankrupt]);
 
 	// Closing a card hands focus back to that station's strip button.
-	const closeCard = () => {
-		const kind = selected;
-		setSelected(null);
-		document
-			.querySelector<HTMLButtonElement>(`[data-station="${kind}"]`)
-			?.focus();
-	};
+	const closeCard = useCallback(() => {
+		setSelected((kind) => {
+			if (kind) {
+				document
+					.querySelector<HTMLButtonElement>(`[data-station="${kind}"]`)
+					?.focus();
+			}
+			return null;
+		});
+	}, []);
+
+	// Space toggles pause; 1/2/3 pick a speed; Esc closes the station card.
+	// Space and digits are left alone in form fields and on buttons, where
+	// they mean something already (Space presses a focused button).
+	const resume = useRef<Speed>(1);
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			const t = e.target as HTMLElement;
+			if (e.key === "Escape") {
+				closeCard();
+				return;
+			}
+			if (
+				t.isContentEditable ||
+				t.closest("button, a, input, select, textarea")
+			)
+				return;
+			if (e.code === "Space") {
+				e.preventDefault();
+				if (speed === 0) setSpeed(resume.current);
+				else {
+					resume.current = speed;
+					setSpeed(0);
+				}
+			} else if (SPEED_KEYS[e.key]) {
+				setSpeed(SPEED_KEYS[e.key]);
+			}
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [speed, setSpeed, closeCard]);
 
 	const save = async () => {
 		const name = `Day ${view.day + 1} · ${view.difficulty}`;
@@ -55,12 +100,17 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 		notice ??
 		(game.autosaveError ? `Autosave failed: ${game.autosaveError}` : null);
 
+	const openTrace = (lot: number) => {
+		setTraceLot(lot);
+		setTab("quality");
+	};
+
 	return (
 		<div className="game">
 			<div className="game-main" inert={bankrupt}>
 				<Hud game={game} onSave={save} onExit={onExit} notice={shown} />
 				<main className="board">
-					<section className="panel floor">
+					<section className="floor" aria-label="Factory floor">
 						<Suspense fallback={<div className="loading">Loading floor…</div>}>
 							<FactoryFloor
 								view={view}
@@ -76,6 +126,11 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 								onClose={closeCard}
 							/>
 						)}
+						<Toasts
+							events={game.events}
+							onTrace={openTrace}
+							onStation={(k) => setSelected(k as StationKind)}
+						/>
 						{/* Keyboard and screen-reader route to every station. */}
 						<nav className="station-strip" aria-label="Stations">
 							{view.stations.map((st) => (
@@ -94,8 +149,13 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 							))}
 						</nav>
 					</section>
-					<Contracts game={game} />
-					<EventLog events={game.events} />
+					<Sidebar
+						game={game}
+						tab={tab}
+						setTab={setTab}
+						traceLot={traceLot}
+						setTraceLot={setTraceLot}
+					/>
 				</main>
 			</div>
 			{view.status.state === "bankrupt" && (

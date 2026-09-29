@@ -1,5 +1,5 @@
 // Thin client for crates/sim-wasm: JSON strings through linear memory.
-import type { Action, Difficulty, View } from "./types";
+import type { Action, Difficulty, TraceReport, View } from "./types";
 
 interface Exports {
 	memory: WebAssembly.Memory;
@@ -11,6 +11,7 @@ interface Exports {
 	sim_apply(ptr: number, len: number): number;
 	sim_step(hours: number): number;
 	sim_view(sinceHi: number, sinceLo: number): number;
+	sim_trace(lot: number): number;
 	sim_save(): number;
 	sim_load(ptr: number, len: number): number;
 }
@@ -71,6 +72,14 @@ export class Sim {
 		const [hi, lo] = split(sinceSeq);
 		this.check(this.x.sim_view(hi, lo));
 		return JSON.parse(this.output()) as View;
+	}
+
+	/** Records for one lot, or null if it does not exist. */
+	trace(lot: number): TraceReport | null {
+		// Lot ids are u32 on the Rust side; anything else would wrap.
+		if (!Number.isInteger(lot) || lot < 0 || lot > 0xffff_ffff) return null;
+		if (this.x.sim_trace(lot) !== 0) return null;
+		return JSON.parse(this.output()) as TraceReport;
 	}
 
 	save(): string {

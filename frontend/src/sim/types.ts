@@ -219,3 +219,26 @@ export type Action =
 	| { type: "set_pm_interval"; station: StationKind; hours: number }
 	| { type: "recall"; lot: number }
 	| { type: "scrap_lot"; lot: number };
+
+export interface TraceLine {
+	lot: number;
+	item: Item;
+	supplier_name: string | null;
+}
+
+export interface TraceReport {
+	lot: number;
+	item: Item;
+	label: string;
+	created: number;
+	initial_qty: number;
+	remaining: number;
+	status: "open" | "available" | "rejected" | "scrapped";
+	built_at: StationKind | null;
+	supplier: number | null;
+	supplier_name: string | null;
+	source_lots: TraceLine[];
+	finished_lots: TraceLine[];
+	shipped_units: number;
+	recalled: boolean;
+}

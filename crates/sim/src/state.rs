@@ -371,8 +371,8 @@ fn default_policies(suppliers: &[Supplier]) -> Policies {
             ReorderPolicy {
                 enabled: true,
                 supplier: pick.id,
-                reorder_point: 120 * per_unit,
-                order_qty: (150 * per_unit).max(pick.min_order),
+                reorder_point: 180 * per_unit,
+                order_qty: (200 * per_unit).max(pick.min_order),
             },
         );
     }

@@ -3,7 +3,7 @@
 // log, and autosaves once per game day.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AUTO_SLOT, writeSave } from "./saves";
-import type { Action, GameEvent, View } from "./types";
+import type { Action, GameEvent, TraceReport, View } from "./types";
 import type { Sim } from "./wasm";
 
 export type Speed = 0 | 1 | 2 | 4;
@@ -23,6 +23,7 @@ export interface Game {
 	save: (slot: string, name: string) => Promise<void>;
 	/** Why the last autosave failed, or null once one succeeds. */
 	autosaveError: string | null;
+	trace: (lot: number) => TraceReport | null;
 }
 
 export function useGame(sim: Sim): Game {
@@ -93,5 +94,7 @@ export function useGame(sim: Sim): Game {
 		[sim, refresh],
 	);
 
-	return { view, events, speed, setSpeed, act, save, autosaveError };
+	const trace = useCallback((lot: number) => sim.trace(lot), [sim]);
+
+	return { view, events, speed, setSpeed, act, save, trace, autosaveError };
 }
