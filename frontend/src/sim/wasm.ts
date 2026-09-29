@@ -26,6 +26,9 @@ const decoder = new TextDecoder();
 
 /** Split a non-negative integer (< 2^53) into u32 halves. */
 function split(n: number): [number, number] {
+	if (!Number.isSafeInteger(n) || n < 0) {
+		throw new RangeError(`expected an integer in [0, 2^53), got ${n}`);
+	}
 	return [Math.floor(n / 2 ** 32), n >>> 0];
 }
 
@@ -35,8 +38,9 @@ export class Sim {
 	static async load(url = "/sim.wasm"): Promise<Sim> {
 		const res = await fetch(url);
 		if (!res.ok) {
+			const hint = import.meta.env.DEV ? "; run `make wasm`" : "";
 			throw new Error(
-				`could not fetch ${url} (${res.status}); run \`make wasm\``,
+				`The game file failed to load (${url}, HTTP ${res.status})${hint}`,
 			);
 		}
 		const { instance } = await WebAssembly.instantiate(

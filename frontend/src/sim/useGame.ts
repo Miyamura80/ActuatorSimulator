@@ -21,12 +21,15 @@ export interface Game {
 	/** Apply an action. Returns null on success or the refusal reason. */
 	act: (a: Action) => string | null;
 	save: (slot: string, name: string) => Promise<void>;
+	/** Why the last autosave failed, or null once one succeeds. */
+	autosaveError: string | null;
 }
 
 export function useGame(sim: Sim): Game {
 	const [view, setView] = useState<View>(() => sim.view(0));
 	const [events, setEvents] = useState<GameEvent[]>(() => view.events);
 	const [speed, setSpeed] = useState<Speed>(0);
+	const [autosaveError, setAutosaveError] = useState<string | null>(null);
 	const seq = useRef(view.next_event_seq);
 	const acc = useRef(0);
 	const lastDay = useRef(view.day);
@@ -68,11 +71,14 @@ export function useGame(sim: Sim): Game {
 			acc.current -= hours;
 			sim.step(hours);
 			const v = refresh();
-			if (v.status.state !== "running") {
-				setSpeed(0);
-			} else if (v.day !== lastDay.current) {
+			const over = v.status.state !== "running";
+			if (over) setSpeed(0);
+			// Save each new day, and the final state when the run ends.
+			if (over || v.day !== lastDay.current) {
 				lastDay.current = v.day;
-				save(AUTO_SLOT, "Autosave").catch(() => {});
+				save(AUTO_SLOT, "Autosave")
+					.then(() => setAutosaveError(null))
+					.catch((e: unknown) => setAutosaveError(String(e)));
 			}
 		}, FRAME_MS);
 		return () => window.clearInterval(id);
@@ -87,5 +93,5 @@ export function useGame(sim: Sim): Game {
 		[sim, refresh],
 	);
 
-	return { view, events, speed, setSpeed, act, save };
+	return { view, events, speed, setSpeed, act, save, autosaveError };
 }

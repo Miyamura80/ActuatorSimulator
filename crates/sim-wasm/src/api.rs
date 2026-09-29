@@ -49,13 +49,21 @@ pub fn save() -> Result<String, String> {
 }
 
 pub fn load(json: &str) -> Result<(), String> {
-    let state: GameState = serde_json::from_str(json).map_err(|e| format!("bad save: {e}"))?;
-    if state.version != SAVE_VERSION {
+    // Check the version before the full parse, so a save from another build
+    // gets a clear message instead of a serde "missing field" error.
+    let value: serde_json::Value =
+        serde_json::from_str(json).map_err(|e| format!("bad save: {e}"))?;
+    let version = value
+        .get("version")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or("bad save: no version")?;
+    if version != u64::from(SAVE_VERSION) {
         return Err(format!(
-            "save is version {}, this build reads version {SAVE_VERSION}",
-            state.version
+            "save is version {version}, this build reads version {SAVE_VERSION}"
         ));
     }
+    let state: GameState = serde_json::from_value(value).map_err(|e| format!("bad save: {e}"))?;
+    state.validate().map_err(|e| format!("bad save: {e}"))?;
     GAME.with(|g| *g.borrow_mut() = Some(state));
     Ok(())
 }
@@ -77,6 +85,11 @@ mod tests {
         new_game(99, 2);
         load(&saved).unwrap();
         assert_eq!(view(0).unwrap(), view_before);
-        assert!(load(r#"{"version": 1}"#).is_err());
+        let old = load(r#"{"version": 1}"#).unwrap_err();
+        assert!(old.contains("version 1"), "{old}");
+        assert!(load("{}").is_err());
+        let dangling = saved.replacen(r#""open_lot":null"#, r#""open_lot":424242"#, 1);
+        assert_ne!(dangling, saved);
+        assert!(load(&dangling).unwrap_err().contains("missing lot"));
     }
 }

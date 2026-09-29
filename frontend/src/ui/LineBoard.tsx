@@ -3,8 +3,15 @@ import type { StationView, View } from "../sim/types";
 type Status = { label: string; tone: "ok" | "idle" | "warn" | "bad" };
 
 function stationStatus(st: StationView, view: View): Status {
-	if (st.machines.some((m) => m.down_reason === "breakdown")) {
+	const broken = st.machines.filter((m) => m.down_reason === "breakdown");
+	if (broken.length > 0 && st.machines.every((m) => m.down_reason)) {
 		return { label: "Broken down", tone: "bad" };
+	}
+	if (broken.length > 0) {
+		return {
+			label: `${broken.length} of ${st.machines.length} machines down`,
+			tone: "warn",
+		};
 	}
 	if (st.spc_alarm) return { label: "SPC alarm", tone: "warn" };
 	if (st.machines.every((m) => m.down_reason === "maintenance")) {

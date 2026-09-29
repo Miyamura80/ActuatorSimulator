@@ -35,7 +35,7 @@ pub struct View {
     pub stock: Vec<StockView>,
     pub suppliers: Vec<SupplierView>,
     pub orders: Vec<OrderView>,
-    pub contracts: Vec<Contract>,
+    pub contracts: Vec<ContractView>,
     pub policies: Policies,
     pub ledger: Ledger,
     pub history: Vec<DaySummary>,
@@ -51,7 +51,7 @@ pub struct StationView {
     pub inputs: Vec<(Item, u32)>,
     pub rate_per_hour: f64,
     pub machine_price: i64,
-    pub machines: Vec<Machine>,
+    pub machines: Vec<MachineView>,
     pub busy: bool,
     pub starved_on: Option<Item>,
     pub wip_cap: u32,
@@ -60,6 +60,66 @@ pub struct StationView {
     pub spc_alarm: bool,
     pub units_built: u64,
     pub units_scrapped: u64,
+}
+
+/// Field by field on purpose: a new hidden field on `Machine` or `Contract`
+/// must not reach the UI just because the model grew.
+#[derive(Debug, Clone, Serialize)]
+pub struct MachineView {
+    pub id: MachineId,
+    pub condition: f64,
+    pub down_until: Option<Tick>,
+    pub down_reason: Option<DownReason>,
+    pub operating_hours: u32,
+    pub hours_since_pm: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ContractView {
+    pub id: ContractId,
+    pub customer: String,
+    pub qty: u32,
+    pub unit_price: i64,
+    pub quality: QualityTier,
+    pub offer_expires: Tick,
+    pub lead_days: u32,
+    pub deadline: Option<Tick>,
+    pub delivered: u32,
+    pub status: ContractStatus,
+    pub late_penalty_rate: f64,
+    pub penalties_paid: i64,
+}
+
+impl From<&Machine> for MachineView {
+    fn from(m: &Machine) -> Self {
+        Self {
+            id: m.id,
+            condition: m.condition,
+            down_until: m.down_until,
+            down_reason: m.down_reason,
+            operating_hours: m.operating_hours,
+            hours_since_pm: m.hours_since_pm,
+        }
+    }
+}
+
+impl From<&Contract> for ContractView {
+    fn from(c: &Contract) -> Self {
+        Self {
+            id: c.id,
+            customer: c.customer.clone(),
+            qty: c.qty,
+            unit_price: c.unit_price,
+            quality: c.quality,
+            offer_expires: c.offer_expires,
+            lead_days: c.lead_days,
+            deadline: c.deadline,
+            delivered: c.delivered,
+            status: c.status,
+            late_penalty_rate: c.late_penalty_rate,
+            penalties_paid: c.penalties_paid,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -187,17 +247,18 @@ impl GameState {
         }
     }
 
-    fn contracts_view(&self) -> Vec<Contract> {
+    fn contracts_view(&self) -> Vec<ContractView> {
         let open =
             |c: &&Contract| matches!(c.status, ContractStatus::Offered | ContractStatus::Active);
-        let mut out: Vec<Contract> = self.contracts.iter().filter(open).cloned().collect();
+        let mut out: Vec<ContractView> =
+            self.contracts.iter().filter(open).map(Into::into).collect();
         out.extend(
             self.contracts
                 .iter()
                 .rev()
                 .filter(|c| !open(c))
                 .take(RECENT_CONTRACTS)
-                .cloned(),
+                .map(Into::into),
         );
         out
     }
@@ -212,7 +273,7 @@ fn station_view(st: &Station) -> StationView {
         inputs: spec.inputs.to_vec(),
         rate_per_hour: spec.rate_per_hour,
         machine_price: spec.machine_price,
-        machines: st.machines.clone(),
+        machines: st.machines.iter().map(Into::into).collect(),
         busy: st.busy,
         starved_on: st.starved_on,
         wip_cap: st.wip_cap,

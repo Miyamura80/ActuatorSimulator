@@ -127,8 +127,6 @@ pub enum EventKind {
         lot: LotId,
         recalled: u32,
         scrapped: u32,
-        /// Pending field failures the recall prevented.
-        averted: u32,
         cost: i64,
     },
     LotScrapped {

@@ -28,7 +28,7 @@ export type StationKind =
 	| "eol_test";
 
 export type Difficulty = "easy" | "normal" | "hard";
-export type Tier = "premium" | "standard" | "budget";
+type Tier = "premium" | "standard" | "budget";
 export type Severity = "info" | "good" | "warning" | "critical";
 
 export type InspectionPlan =
@@ -99,12 +99,7 @@ export interface OrderView {
 	late: boolean;
 }
 
-export type ContractStatus =
-	| "offered"
-	| "active"
-	| "completed"
-	| "failed"
-	| "expired";
+type ContractStatus = "offered" | "active" | "completed" | "failed" | "expired";
 
 export interface Contract {
 	id: number;
@@ -121,7 +116,7 @@ export interface Contract {
 	penalties_paid: number;
 }
 
-export interface ReorderPolicy {
+interface ReorderPolicy {
 	enabled: boolean;
 	supplier: number;
 	reorder_point: number;

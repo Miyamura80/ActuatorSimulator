@@ -1,5 +1,6 @@
-// Save slots in IndexedDB. A save is the full sim JSON plus a small header
-// for the load menu. The "auto" slot is overwritten once per game day.
+// Save slots in IndexedDB. Headers (for the load menu) and the full sim JSON
+// live in separate stores so listing slots never reads the big payloads. The
+// "auto" slot is overwritten once per game day.
 import type { Difficulty } from "./types";
 
 export interface SaveHeader {
@@ -11,35 +12,45 @@ export interface SaveHeader {
 	savedAt: number;
 }
 
-interface SaveRecord extends SaveHeader {
+interface SaveData {
+	slot: string;
 	data: string;
 }
 
 export const AUTO_SLOT = "auto";
 const DB_NAME = "actuator-works";
-const STORE = "saves";
+const HEADERS = "headers";
+const DATA = "data";
 
 function open(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
 		const req = indexedDB.open(DB_NAME, 1);
 		req.onupgradeneeded = () => {
-			req.result.createObjectStore(STORE, { keyPath: "slot" });
+			req.result.createObjectStore(HEADERS, { keyPath: "slot" });
+			req.result.createObjectStore(DATA, { keyPath: "slot" });
 		};
 		req.onsuccess = () => resolve(req.result);
 		req.onerror = () => reject(req.error);
 	});
 }
 
+/**
+ * Run `op` in one transaction. Resolves with `op`'s result only once the
+ * transaction commits, so a later abort is reported as a failure.
+ */
 async function run<T>(
+	stores: string[],
 	mode: IDBTransactionMode,
-	op: (store: IDBObjectStore) => IDBRequest<T>,
-): Promise<T> {
+	op: (tx: IDBTransaction) => IDBRequest<T> | undefined,
+): Promise<T | undefined> {
 	const db = await open();
 	try {
-		return await new Promise<T>((resolve, reject) => {
-			const req = op(db.transaction(STORE, mode).objectStore(STORE));
-			req.onsuccess = () => resolve(req.result);
-			req.onerror = () => reject(req.error);
+		return await new Promise<T | undefined>((resolve, reject) => {
+			const tx = db.transaction(stores, mode);
+			const req = op(tx);
+			tx.oncomplete = () => resolve(req?.result);
+			tx.onabort = () => reject(tx.error ?? new Error("save aborted"));
+			tx.onerror = () => reject(tx.error);
 		});
 	} finally {
 		db.close();
@@ -47,22 +58,32 @@ async function run<T>(
 }
 
 export async function writeSave(header: SaveHeader, data: string) {
-	const record: SaveRecord = { ...header, data };
-	await run("readwrite", (s) => s.put(record));
+	const record: SaveData = { slot: header.slot, data };
+	await run([HEADERS, DATA], "readwrite", (tx) => {
+		tx.objectStore(DATA).put(record);
+		tx.objectStore(HEADERS).put(header);
+		return undefined;
+	});
 }
 
 export async function readSave(slot: string): Promise<string | null> {
-	const rec = await run<SaveRecord | undefined>("readonly", (s) => s.get(slot));
+	const rec = await run<SaveData | undefined>([DATA], "readonly", (tx) =>
+		tx.objectStore(DATA).get(slot),
+	);
 	return rec?.data ?? null;
 }
 
 export async function listSaves(): Promise<SaveHeader[]> {
-	const all = await run<SaveRecord[]>("readonly", (s) => s.getAll());
-	return all
-		.map(({ data: _data, ...header }) => header)
-		.sort((a, b) => b.savedAt - a.savedAt);
+	const all = await run<SaveHeader[]>([HEADERS], "readonly", (tx) =>
+		tx.objectStore(HEADERS).getAll(),
+	);
+	return (all ?? []).sort((a, b) => b.savedAt - a.savedAt);
 }
 
 export async function deleteSave(slot: string) {
-	await run("readwrite", (s) => s.delete(slot));
+	await run([HEADERS, DATA], "readwrite", (tx) => {
+		tx.objectStore(HEADERS).delete(slot);
+		tx.objectStore(DATA).delete(slot);
+		return undefined;
+	});
 }

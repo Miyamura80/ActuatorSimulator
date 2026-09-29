@@ -81,4 +81,4 @@ jobs:
       - name: Build game
         run: make web
       - name: Check bundle contains the sim module
-        run: test -s dist/sim.wasm || test -s frontend/dist/sim.wasm
+        run: test -s frontend/dist/sim.wasm

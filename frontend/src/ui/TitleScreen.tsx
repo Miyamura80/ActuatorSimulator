@@ -23,21 +23,35 @@ export function TitleScreen({ onNew, onLoad, error }: Props) {
 	const [difficulty, setDifficulty] = useState<Difficulty>("normal");
 	const [seed, setSeed] = useState(randomSeed);
 	const [saves, setSaves] = useState<SaveHeader[]>([]);
+	const [storageError, setStorageError] = useState<string | null>(null);
+	const failed = (what: string) => (e: unknown) =>
+		setStorageError(`${what}: ${String(e)}`);
 
 	useEffect(() => {
 		listSaves()
 			.then(setSaves)
-			.catch(() => setSaves([]));
+			.catch((e: unknown) =>
+				setStorageError(`Could not read saved plants: ${String(e)}`),
+			);
 	}, []);
 
 	const load = async (slot: string) => {
-		const json = await readSave(slot);
-		if (json) onLoad(json);
+		try {
+			const json = await readSave(slot);
+			if (json) onLoad(json);
+			else setStorageError("That save is empty or missing");
+		} catch (e) {
+			failed("Could not read that save")(e);
+		}
 	};
 
 	const remove = async (slot: string) => {
-		await deleteSave(slot);
-		setSaves(await listSaves());
+		try {
+			await deleteSave(slot);
+			setSaves(await listSaves());
+		} catch (e) {
+			failed("Could not delete that save")(e);
+		}
 	};
 
 	return (
@@ -73,7 +87,12 @@ export function TitleScreen({ onNew, onLoad, error }: Props) {
 							min={0}
 							value={seed}
 							onChange={(e) =>
-								setSeed(Math.max(0, Number(e.target.value) || 0))
+								setSeed(
+									Math.min(
+										Number.MAX_SAFE_INTEGER,
+										Math.max(0, Math.floor(Number(e.target.value) || 0)),
+									),
+								)
 							}
 						/>
 						<button
@@ -124,6 +143,7 @@ export function TitleScreen({ onNew, onLoad, error }: Props) {
 						</ul>
 					</section>
 				)}
+				{storageError && <p className="error">{storageError}</p>}
 				{error && <p className="error">{error}</p>}
 			</div>
 		</div>

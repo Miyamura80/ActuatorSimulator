@@ -30,7 +30,7 @@ and come back as RMAs. Stay solvent, grow reputation, land bigger contracts.
             crates/sim  (pure Rust: no async, no IO, seeded RNG, serde state)
             Game::new(seed, difficulty) / apply(Action) / step() / snapshot()
                      |                                   |
-         crates/sim-wasm (wasm-bindgen)          crates/engine commands
+         crates/sim-wasm (C ABI, JSON)           crates/engine commands
                      |                            (sim_run, ...)
          frontend: Vite + React + r3f                     |
          game loop in the browser tab,          actsim CLI: headless runs,
@@ -170,14 +170,19 @@ frequency, machine wear, and contract strictness: Easy / Normal / Hard.
     remaining stock.
 
 - **WASM bridge is a plain C ABI** (`crates/sim-wasm`): JSON strings through
-  linear memory, about 60 lines of TS on the other side. No wasm-bindgen CLI to
-  pin in CI or Docker. The module is 650 KB (170 KB gzipped) with the `wasm`
+  linear memory, read by one small TS class (`frontend/src/sim/wasm.ts`). No
+  wasm-bindgen CLI to pin in CI or Docker. The module is 650 KB (170 KB gzipped) with the `wasm`
   build profile.
 - **The UI sees a `View`, never the state**: `GameState::view` leaves out
   hidden defect counts, supplier quality numbers, drift, pending field
-  failures and true arrival dates, so the browser cannot leak them.
+  failures and true arrival dates, so the UI never displays them. This is a
+  display boundary, not a secret: saves hold the full state, and anyone who
+  opens IndexedDB can read it. It is a single-player game, so that is fine.
 - **Saves** are the full state JSON in IndexedDB, with an autosave slot written
-  once per game day. `SAVE_VERSION` mismatches are refused on load.
+  once per game day and when a run ends. Headers live in their own store so
+  the load menu never reads the payloads. Loading refuses a `SAVE_VERSION`
+  mismatch (checked before the full parse) and any save whose IDs don't
+  resolve (`GameState::validate`).
 - **Game speed**: 1x is 2 game hours per real second (a 90-day game is about
   18 minutes); 2x and 4x multiply it.
 

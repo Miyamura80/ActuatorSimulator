@@ -249,6 +249,10 @@ h2 {
 	display: flex;
 	flex-direction: column;
 }
+/* Wrapper only so a modal can make the page behind it inert. */
+.game-main {
+	display: contents;
+}
 .hud {
 	display: flex;
 	align-items: center;

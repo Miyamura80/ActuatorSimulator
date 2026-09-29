@@ -29,6 +29,7 @@ function App() {
 
 	const startNew = (seed: number, difficulty: Difficulty) => {
 		sim?.newGame(seed, difficulty);
+		setError(null);
 		play();
 	};
 
