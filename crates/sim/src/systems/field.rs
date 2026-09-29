@@ -186,6 +186,10 @@ fn scrap_units(state: &mut GameState, id: LotId) -> u32 {
     l.qty = 0;
     l.defects = 0;
     l.latent = 0;
-    state.today.scrapped += qty;
+    // Finished goods were already counted as produced when they passed EOL;
+    // counting them again as scrap would double-count them in the scrap rate.
+    if item != Item::FinishedGood {
+        state.today.scrapped += qty;
+    }
     qty
 }
