@@ -1,15 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { beaconState } from "../floor/status";
+import type { StationKind } from "../sim/types";
 import { useGame } from "../sim/useGame";
 import type { Sim } from "../sim/wasm";
 import { Contracts } from "./Contracts";
 import { EventLog } from "./EventLog";
 import { formatMoney } from "./format";
 import { Hud } from "./Hud";
-import { LineBoard } from "./LineBoard";
+import { StationCard } from "./StationCard";
+
+// three.js is the bulk of the bundle; load it after the menu.
+const FactoryFloor = lazy(() =>
+	import("../floor/FactoryFloor").then((m) => ({ default: m.FactoryFloor })),
+);
 
 export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	const game = useGame(sim);
 	const [notice, setNotice] = useState<string | null>(null);
+	const [selected, setSelected] = useState<StationKind | null>(null);
 	const { view } = game;
 	const bankrupt = view.status.state === "bankrupt";
 	const exitRef = useRef<HTMLButtonElement>(null);
@@ -20,6 +28,15 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	useEffect(() => {
 		if (bankrupt) exitRef.current?.focus();
 	}, [bankrupt]);
+
+	// Closing a card hands focus back to that station's strip button.
+	const closeCard = () => {
+		const kind = selected;
+		setSelected(null);
+		document
+			.querySelector<HTMLButtonElement>(`[data-station="${kind}"]`)
+			?.focus();
+	};
 
 	const save = async () => {
 		const name = `Day ${view.day + 1} · ${view.difficulty}`;
@@ -43,7 +60,40 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 			<div className="game-main" inert={bankrupt}>
 				<Hud game={game} onSave={save} onExit={onExit} notice={shown} />
 				<main className="board">
-					<LineBoard view={view} />
+					<section className="panel floor">
+						<Suspense fallback={<div className="loading">Loading floor…</div>}>
+							<FactoryFloor
+								view={view}
+								selected={selected}
+								onSelect={setSelected}
+							/>
+						</Suspense>
+						{selected && (
+							<StationCard
+								key={selected}
+								game={game}
+								kind={selected}
+								onClose={closeCard}
+							/>
+						)}
+						{/* Keyboard and screen-reader route to every station. */}
+						<nav className="station-strip" aria-label="Stations">
+							{view.stations.map((st) => (
+								<button
+									type="button"
+									key={st.kind}
+									data-station={st.kind}
+									aria-pressed={selected === st.kind}
+									className={`strip-btn beacon-${beaconState(st, view.operating)}${selected === st.kind ? " on" : ""}`}
+									onClick={() =>
+										setSelected(selected === st.kind ? null : st.kind)
+									}
+								>
+									{st.label}
+								</button>
+							))}
+						</nav>
+					</section>
 					<Contracts game={game} />
 					<EventLog events={game.events} />
 				</main>
