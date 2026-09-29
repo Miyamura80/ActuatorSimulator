@@ -1,115 +1,91 @@
-# ActuatorSimulator
+# Actuator Works
 
 <p align="center">
   <img src="media/banner.png" alt="banner" width="400">
 </p>
 
 <p align="center">
-<b>agent-ready Rust server + CLI template</b>
+<b>A factory tycoon about building robot joint actuators, and everything that goes wrong along the way.</b>
 </p>
 
 <p align="center">
-  <a href="#key-features">Key Features</a> •
+  <a href="#the-game">The Game</a> •
+  <a href="#play-locally">Play Locally</a> •
   <a href="#architecture">Architecture</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#configuration">Configuration</a> •
-  <a href="#agent-skills">Agent Skills</a> •
-  <a href="#credits">Credits</a>
+  <a href="#development">Development</a> •
+  <a href="#deploy">Deploy</a>
 </p>
 
 <p align="center">
-  <img alt="Rust Version" src="https://img.shields.io/badge/rust-1.75%2B-blue?logo=rust">
-  <img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/Miyamura80/ActuatorSimulator">
   <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Miyamura80/ActuatorSimulator/rust_checks.yaml?branch=main">
 </p>
 
 ---
 
-## Key Features
+## The Game
 
-A Rust application-server template: **write your business logic once as a typed
-`Command`, and expose it over multiple transports** - a CLI, an HTTP API, and
-(later) MCP - all from one shared core. An optional React/Vite frontend talks to
-the API over `fetch`.
+You run a small plant that builds servo actuators for robot joints: a BLDC
+motor, an encoder, a harmonic gearbox and a driver board in one housing.
 
-| Feature | Tech Stack |
-|---------|:----------:|
-| **Core** | `engine` crate - typed async `Command` registry (no transport deps) |
-| **CLI + API** | `actsim` binary - `call` / `serve` / `doctor` / `probe` / `run-scenario` |
-| **HTTP API** | `axum` + `tower` (CORS, tracing, timeout, request-id) |
-| **Contract** | `schemars` JSON Schema shared across CLI, API, and future MCP |
-| **Config** | `app-config` crate (YAML + `APP__` env overrides + sanitizer) |
-| **Frontend** (optional) | React + TypeScript + Vite, `fetch`-based API client |
-| **Logging** | `tracing` + redaction layer |
-| **Packaging** | `cargo-dist` (binaries + installers) and a server `Dockerfile` |
-| **Package Manager** | Bun |
-| **Formatting** | Biome + `cargo fmt` |
+- **Buy parts** from suppliers with different prices, lead times and quality.
+  Budget suppliers are cheap until a bad lot slips through.
+- **Run the line**: seven stations (CNC mill, gear cutting, stator winding, SMT,
+  motor assembly, final assembly, end-of-line test) in a live 3D factory.
+- **Fight failures**: late trucks, bad lots, supplier bankruptcies, machine
+  wear and breakdowns, drifting processes caught (or not) by SPC charts, and
+  escaped defects that come back weeks later as field returns.
+- **Trace and recall**: every unit's history is recorded by lot; trace a
+  failure back to the supplier lot and recall what shipped.
+- **Win contracts**, grow reputation, stay above the overdraft limit.
+
+Modes: sandbox (Easy / Normal / Hard, any seed), a guided tutorial, and a
+seeded **daily challenge** (same plant for everyone, 30 days, best score kept).
+
+Controls: click stations or use the station strip, `Space` pause/resume,
+`1` / `2` / `3` speed, `Esc` close panels.
+
+## Play Locally
+
+```bash
+make dev      # builds the sim to WebAssembly, then opens Vite on http://localhost:1420
+```
+
+Needs Rust (stable, with the `wasm32-unknown-unknown` target, which `make wasm`
+installs) and [Bun](https://bun.sh).
 
 ## Architecture
 
 ```
-        ┌────────────────────────────────────────────────────────────┐
-        │  TRANSPORTS  (crates/cli - one binary `actsim`, subcommands) │
-        │                                                              │
-        │   actsim call <cmd> --args '{...}'   one-shot JSON I/O       │
-        │   actsim serve --port 8080           axum HTTP API           │
-        │   actsim doctor | probe | run-scenario                       │
-        │   actsim mcp                          (stub - see docs/mcp.md)│
-        └───────────────┬─────────────────────────┬───────────────────┘
-                        │                          │
-        optional bun/React frontend               │  same registry
-        ────────── HTTP/fetch ─────────▶ serve ────┤  + typed contract
-                                                   │
-        ┌──────────────────────────────────────────▼───────────────────┐
-        │  crates/engine  - the service core (no transport deps)         │
-        │    Command trait:  Input: JsonSchema + Deserialize             │
-        │                    Output: JsonSchema + Serialize              │
-        │    CommandRegistry (inventory self-registration) + schema()    │
-        │    Ctx (per-request): fs / network capabilities, request_id    │
-        └───────────────────────────┬───────────────────────────────────┘
-                                     │
-        ┌────────────────────────────▼──────────────────────────────────┐
-        │  crates/config (app-config) - AppConfig / FrontendConfig        │
-        │                 YAML + APP__ env overrides + secret sanitizer   │
-        └─────────────────────────────────────────────────────────────────┘
+crates/sim        pure, deterministic Rust simulation (seeded RNG, serde state)
+   │                GameState::new(seed, difficulty) / apply(Action) / step() / view()
+   ├── crates/sim-wasm   C-ABI WebAssembly bridge (JSON in/out)
+   │      └── frontend/  React + react-three-fiber game, runs the sim in the tab,
+   │                      IndexedDB saves, Web Audio sound
+   └── crates/engine     typed Command registry (sim_run, ...)
+          └── crates/cli the `actsim` binary: headless runs, balance sweeps, HTTP API
 ```
 
-- `crates/engine/` - all real logic; a typed, async `Command` registry with
-  self-registration (`inventory`). No CLI/HTTP dependency.
-- `crates/cli/` - the `actsim` binary. The `cli` and `http-api` surfaces are
-  cargo features (both on by default) so `actsim init` can prune one.
-- `crates/config/` - `AppConfig` (with secrets) vs the sanitized
-  `FrontendConfig` served over HTTP. The sanitizer is a security boundary.
-- `crates/assetgen/` - `asset-gen` binary for `make banner` / `make logo`.
-- `frontend/` - optional React/Vite visualization app (`fetch` API client).
-- `docs/` - Next.js docs site.
+The same seed plus the same actions always replays the same game, which is
+what makes saves, the daily challenge and headless balance tests work. Game
+design, decisions and balance notes live in [`docs/design.md`](docs/design.md).
 
-## Quick Start
+## Development
 
 ```bash
-# 1. Onboard the template into a real project (dry-run first, then apply)
-make init PROFILE=cli+server DRY_RUN=1
-make init PROFILE=cli+server
-
-# 2. Build + test the workspace
-cargo build --workspace
-cargo test --workspace
-
-# 3. Run the HTTP API
-make run                    # = actsim serve   (GET /healthz, /api/v1/commands)
-
-# 4. Call a command headlessly
-cargo run -p actsim -- call ping --json
-cargo run -p actsim -- call read_file --args '{"path": "/etc/hostname"}' --json
-
-# 5. (optional) Run the frontend against the API
-bun install
-make dev                    # Vite dev server; /api is proxied to actsim serve
+cargo test --workspace                                      # Rust tests
+make ci                                                     # everything CI runs
+actsim call sim_run --args '{"seeds":20,"days":90}' --json  # autopilot balance sweep
+make web                                                    # static build in frontend/dist
 ```
 
-Scaffold a new command with `make new name=fetch_url` (or `actsim new
-fetch_url`) - it self-registers, so it's immediately callable over the CLI and
-the API.
+Commit conventions and agent guidance are in [`CLAUDE.md`](CLAUDE.md).
+
+## Deploy
+
+`Dockerfile.web` builds `sim.wasm` and the Vite bundle and serves them with
+Caddy (compression, long-lived caching for hashed assets, `$PORT` aware).
+`railway.toml` points Railway at it. The original `Dockerfile` still builds the
+`actsim` HTTP API server.
 
 ## Asset Generation
 

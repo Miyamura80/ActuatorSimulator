@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+# Static build of the game (sim.wasm + Vite bundle) served by Caddy.
+# The HTTP API image is the plain `Dockerfile`; this one needs no server code.
+
+# ---- WASM -------------------------------------------------------------------
+FROM rust:1-bookworm AS wasm
+WORKDIR /app
+RUN rustup target add wasm32-unknown-unknown
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+RUN cargo build --locked -p sim-wasm --profile wasm --target wasm32-unknown-unknown
+
+# ---- Web bundle -------------------------------------------------------------
+FROM oven/bun:1 AS web
+WORKDIR /app
+COPY package.json bun.lock tsconfig*.json ./
+RUN bun install --frozen-lockfile
+COPY frontend ./frontend
+COPY --from=wasm /app/target/wasm32-unknown-unknown/wasm/sim_wasm.wasm ./frontend/public/sim.wasm
+RUN bun run build
+
+# ---- Runtime ----------------------------------------------------------------
+FROM caddy:2-alpine
+# Serve as an unprivileged user; Caddy only needs its data and config dirs.
+RUN adduser -D -H -u 10001 web && chown -R web /data /config
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=web /app/frontend/dist /srv
+USER web
+# Railway (and most hosts) pass the port in $PORT; Caddyfile defaults to 8080.
+ENV PORT=8080
+EXPOSE 8080

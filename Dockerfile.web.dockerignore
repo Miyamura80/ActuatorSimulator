@@ -1,0 +1,8 @@
+target/
+node_modules/
+frontend/dist/
+frontend/public/sim.wasm
+.git/
+.github/
+docs/
+media/

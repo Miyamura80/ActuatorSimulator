@@ -1,0 +1,8 @@
+# Railway deploys the static game (see Dockerfile.web).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.web"
+
+[deploy]
+healthcheckPath = "/"
+restartPolicyType = "ON_FAILURE"
