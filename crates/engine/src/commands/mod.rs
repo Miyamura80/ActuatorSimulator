@@ -45,6 +45,7 @@ mod http_request;
 mod list_dir;
 mod ping;
 mod read_file;
+mod sim_run;
 mod system_info;
 mod write_file;
 

@@ -1,0 +1,12 @@
+[package]
+name = "sim"
+version = "0.1.0"
+edition = "2021"
+description = "Deterministic actuator-factory simulation core (pure Rust, no IO, WASM-friendly)"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }
