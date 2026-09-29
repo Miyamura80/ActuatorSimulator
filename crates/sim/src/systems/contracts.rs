@@ -182,6 +182,7 @@ pub fn ship(state: &mut GameState, id: ContractId) {
         return;
     }
     let drawn = state.take_units(Item::FinishedGood, qty);
+    crate::systems::field::schedule(state, id, &drawn.parts);
     state.shipments.push(Shipment {
         contract: id,
         tick: state.tick,

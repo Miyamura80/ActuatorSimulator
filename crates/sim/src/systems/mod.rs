@@ -2,5 +2,8 @@
 
 pub mod contracts;
 pub mod economy;
+pub mod field;
+pub mod maintenance;
 pub mod production;
 pub mod purchasing;
+pub mod supply_events;

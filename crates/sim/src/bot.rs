@@ -10,7 +10,7 @@ use crate::state::GameState;
 /// Hour of day the bot makes its decisions.
 const DECISION_HOUR: u32 = 1;
 /// Keep this much cash after buying a machine.
-const CASH_BUFFER: i64 = 60_000;
+const CASH_BUFFER: i64 = 120_000;
 
 /// Estimated finished units per day at the current bottleneck.
 pub fn daily_capacity(state: &GameState) -> f64 {
@@ -76,6 +76,11 @@ pub fn decide(state: &GameState) -> Vec<Action> {
         actions.push(Action::SetShifts { shifts: shifts + 1 });
     } else if days_of_work < 3.0 && shifts > 1 {
         actions.push(Action::SetShifts { shifts: shifts - 1 });
+    }
+
+    // An SPC alarm means the process has shifted: stop and reset it.
+    for st in state.stations.iter().filter(|s| s.spc_alarm) {
+        actions.push(Action::Maintain { station: st.kind });
     }
 
     let neck = bottleneck(state);

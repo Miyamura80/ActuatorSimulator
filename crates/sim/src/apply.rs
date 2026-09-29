@@ -5,7 +5,7 @@ use crate::event::{EventKind, Severity};
 use crate::model::{ContractStatus, Machine, MachineId};
 use crate::policy::InspectionPlan;
 use crate::state::GameState;
-use crate::systems::{contracts, purchasing};
+use crate::systems::{contracts, field, maintenance, purchasing};
 
 /// Fraction of the purchase price returned when selling a machine.
 const RESALE_FRACTION: f64 = 0.5;
@@ -87,12 +87,7 @@ impl GameState {
                 self.spend(cost, |l| &mut l.capex);
                 let id = MachineId(self.next_machine_id);
                 self.next_machine_id += 1;
-                self.station_mut(station).machines.push(Machine {
-                    id,
-                    condition: 100.0,
-                    down_until: None,
-                    operating_hours: 0,
-                });
+                self.station_mut(station).machines.push(Machine::new(id));
                 self.emit(
                     Severity::Info,
                     format!("Bought a machine for {} (${cost})", station.label()),
@@ -127,6 +122,13 @@ impl GameState {
             }
             Action::AcceptContract { contract } => contracts::accept(self, contract),
             Action::DeclineContract { contract } => contracts::decline(self, contract),
+            Action::Maintain { station } => maintenance::maintain(self, station),
+            Action::SetPmInterval { station, hours } => {
+                self.station_mut(station).pm_interval = hours;
+                Ok(())
+            }
+            Action::Recall { lot } => field::recall(self, lot),
+            Action::ScrapLot { lot } => field::scrap(self, lot),
             Action::ShipNow { contract } => {
                 let c = self
                     .contracts

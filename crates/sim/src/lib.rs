@@ -22,6 +22,7 @@ pub mod policy;
 pub mod rng;
 pub mod state;
 pub mod systems;
+pub mod trace;
 
 pub use action::{Action, ActionError};
 pub use catalog::{Item, StationKind};
@@ -36,9 +37,12 @@ impl GameState {
         if self.is_over() {
             return;
         }
+        systems::supply_events::tick(self);
         systems::purchasing::tick(self);
+        systems::maintenance::tick(self);
         systems::production::tick(self);
         systems::contracts::tick(self);
+        systems::field::tick(self);
         systems::economy::tick(self);
         self.tick += 1;
     }

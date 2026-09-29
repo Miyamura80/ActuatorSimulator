@@ -27,9 +27,9 @@ pub fn place_order(
     }
     let qty = qty.max(s.min_order);
     let unit_price = if expedite {
-        (s.unit_price as f64 * EXPEDITE_PRICE_MULT).round() as i64
+        (s.current_price() as f64 * EXPEDITE_PRICE_MULT).round() as i64
     } else {
-        s.unit_price
+        s.current_price()
     };
     let cost = qty as i64 * unit_price;
     if state.cash - cost < -state.tuning.overdraft_limit {
@@ -122,10 +122,17 @@ pub fn tick(state: &mut GameState) {
 fn receive(state: &mut GameState, id: OrderId) {
     let order = state.orders[id.0 as usize].clone();
     state.orders[id.0 as usize].status = OrderStatus::Received;
-    let (defect_rate, latent_rate) = {
+    let (mut defect_rate, mut latent_rate) = {
         let s = &state.suppliers[order.supplier.0 as usize];
         (s.defect_rate, s.latent_rate)
     };
+    // A supplier process excursion: this delivery is a bad lot.
+    if state.suppliers[order.supplier.0 as usize].bad_lots_pending > 0 {
+        state.suppliers[order.supplier.0 as usize].bad_lots_pending -= 1;
+        let mult = state.rng.range_f64(6.0, 15.0);
+        defect_rate = (defect_rate * mult).max(0.04);
+        latent_rate = (latent_rate * mult).max(0.01);
+    }
     let defects = state.rng.binomial(order.qty, defect_rate);
     let latent = state.rng.binomial(order.qty - defects, latent_rate);
     let origin = LotOrigin::Purchased {

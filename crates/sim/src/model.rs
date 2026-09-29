@@ -2,6 +2,7 @@
 
 use crate::catalog::{Item, StationKind, Tier};
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 /// One tick is one hour of game time.
 pub type Tick = u32;
@@ -37,6 +38,11 @@ pub struct Supplier {
     pub reliability: f64,
     pub min_order: u32,
     pub active: bool,
+    /// Current price multiplier (price spikes).
+    pub price_mult: f64,
+    pub price_spike_until: Option<Tick>,
+    /// Hidden: this many upcoming deliveries are bad lots.
+    pub bad_lots_pending: u32,
     /// Lots received / rejected at IQC, for the player's scorecard.
     pub lots_received: u32,
     pub lots_rejected: u32,
@@ -65,6 +71,8 @@ pub enum LotStatus {
     Available,
     /// Failed incoming inspection and went back to the supplier.
     Rejected,
+    /// Scrapped by the player (quarantine, recall).
+    Scrapped,
 }
 
 /// A batch of identical items. `defects` and `latent` are hidden from the
@@ -84,6 +92,9 @@ pub struct Lot {
     pub origin: LotOrigin,
     pub created: Tick,
     pub status: LotStatus,
+    /// Shipped units from this lot were recalled.
+    #[serde(default)]
+    pub recalled: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,6 +102,8 @@ pub struct Lot {
 pub enum OrderStatus {
     Pending,
     Received,
+    /// The supplier went bust before shipping.
+    Lost,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,10 +127,40 @@ pub struct Machine {
     pub id: MachineId,
     /// 0..=100. Lower condition means slower output and more defects.
     pub condition: f64,
-    /// Down for repair until this tick.
+    /// Out of service (repair or maintenance) until this tick.
     pub down_until: Option<Tick>,
+    pub down_reason: Option<DownReason>,
     pub operating_hours: u32,
+    /// Operating hours since the last preventive maintenance.
+    pub hours_since_pm: u32,
 }
+
+impl Machine {
+    pub fn new(id: MachineId) -> Self {
+        Self {
+            id,
+            condition: 100.0,
+            down_until: None,
+            down_reason: None,
+            operating_hours: 0,
+            hours_since_pm: 0,
+        }
+    }
+
+    pub fn is_up(&self) -> bool {
+        self.down_until.is_none()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DownReason {
+    Breakdown,
+    Maintenance,
+}
+
+/// SPC samples kept per station.
+pub const SPC_HISTORY: usize = 48;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Station {
@@ -134,6 +177,14 @@ pub struct Station {
     pub busy: bool,
     /// Why the station was idle in the last operating tick, if it was.
     pub starved_on: Option<Item>,
+    /// Hidden process mean shift in sigma units (tool wear, breakage).
+    pub drift: f64,
+    /// Hourly x-bar samples (subgroup of 5), newest last, in sigma units.
+    pub spc: VecDeque<f64>,
+    /// An SPC rule is currently violated.
+    pub spc_alarm: bool,
+    /// Preventive maintenance every this many operating hours (0 = never).
+    pub pm_interval: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -173,6 +224,13 @@ pub struct Contract {
     pub penalties_paid: i64,
 }
 
+impl Supplier {
+    /// Price per unit today, including any spike.
+    pub fn current_price(&self) -> i64 {
+        (self.unit_price as f64 * self.price_mult).round() as i64
+    }
+}
+
 impl Contract {
     pub fn value(&self) -> i64 {
         self.qty as i64 * self.unit_price
@@ -209,12 +267,23 @@ pub struct Ledger {
     pub capex: i64,
     pub inspection: i64,
     pub penalties: i64,
+    pub maintenance: i64,
+    pub rma: i64,
+    pub recalls: i64,
     pub refunds: i64,
 }
 
 impl Ledger {
     pub fn costs(&self) -> i64 {
-        self.materials + self.labor + self.overhead + self.capex + self.inspection + self.penalties
+        self.materials
+            + self.labor
+            + self.overhead
+            + self.capex
+            + self.inspection
+            + self.penalties
+            + self.maintenance
+            + self.rma
+            + self.recalls
             - self.refunds
     }
 }
@@ -231,6 +300,19 @@ pub struct DaySummary {
     pub shipped: u32,
     pub scrapped: u32,
     pub iqc_rejects: u32,
+    pub field_failures: u32,
+    pub breakdowns: u32,
+}
+
+/// A shipped unit that will fail at the customer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingFailure {
+    pub due: Tick,
+    pub contract: ContractId,
+    /// Finished-goods lot the unit shipped from.
+    pub lot: LotId,
+    /// Dead on arrival (detectable defect) rather than a latent failure.
+    pub doa: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
