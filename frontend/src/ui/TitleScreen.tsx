@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { DAILY_DAYS, todayUtc } from "../modes";
+import { loadDailyResults } from "../settings";
 import { deleteSave, listSaves, readSave, type SaveHeader } from "../sim/saves";
 import type { Difficulty } from "../sim/types";
 import { formatMoney } from "./format";
@@ -6,6 +8,10 @@ import { formatMoney } from "./format";
 interface Props {
 	onNew: (seed: number, difficulty: Difficulty) => void;
 	onLoad: (json: string) => void;
+	onTutorial: () => void;
+	onDaily: () => void;
+	onSettings: () => void;
+	offerTutorial: boolean;
 	error: string | null;
 }
 
@@ -19,7 +25,17 @@ function randomSeed() {
 	return Math.floor(Math.random() * 1_000_000);
 }
 
-export function TitleScreen({ onNew, onLoad, error }: Props) {
+export function TitleScreen({
+	onNew,
+	onLoad,
+	onTutorial,
+	onDaily,
+	onSettings,
+	offerTutorial,
+	error,
+}: Props) {
+	const [daily] = useState(loadDailyResults);
+	const today = daily.find((d) => d.date === todayUtc());
 	const [difficulty, setDifficulty] = useState<Difficulty>("normal");
 	const [seed, setSeed] = useState(randomSeed);
 	const [saves, setSaves] = useState<SaveHeader[]>([]);
@@ -63,6 +79,26 @@ export function TitleScreen({ onNew, onLoad, error }: Props) {
 					Build robot joint actuators. Keep the line running. Keep the customers
 					happy. Stay solvent.
 				</p>
+
+				<div className="quick">
+					{/* Hidden once done; Settings can offer it again. */}
+					{offerTutorial && (
+						<button type="button" className="primary" onClick={onTutorial}>
+							Tutorial
+						</button>
+					)}
+					<button type="button" onClick={onDaily}>
+						Daily challenge
+						<span className="muted small">
+							{today
+								? ` · today's best ${formatMoney(today.score)}`
+								: ` · ${DAILY_DAYS} days, same plant for everyone`}
+						</span>
+					</button>
+					<button type="button" className="ghost" onClick={onSettings}>
+						Settings
+					</button>
+				</div>
 
 				<section>
 					<h2>New plant</h2>
@@ -138,6 +174,26 @@ export function TitleScreen({ onNew, onLoad, error }: Props) {
 									>
 										Delete
 									</button>
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
+				{daily.length > 0 && (
+					<section>
+						<h2>Daily challenge results</h2>
+						<ul className="saves">
+							{daily.slice(0, 5).map((d) => (
+								<li key={d.date}>
+									<div>
+										<strong>{d.date}</strong>
+										<span>
+											{d.bankrupt
+												? "Bankrupt"
+												: `${formatMoney(d.cash)} cash · ${d.reputation.toFixed(0)} rep`}
+										</span>
+									</div>
+									<strong className="num">{formatMoney(d.score)}</strong>
 								</li>
 							))}
 						</ul>

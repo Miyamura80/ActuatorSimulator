@@ -1,3 +1,4 @@
+import { DAILY_DAYS, type Mode, modeLabel } from "../modes";
 import type { Game, Speed } from "../sim/useGame";
 import { formatClock, formatMoney } from "./format";
 
@@ -10,12 +11,14 @@ const SPEEDS: { s: Speed; label: string }[] = [
 
 interface Props {
 	game: Game;
+	mode: Mode;
 	onSave: () => void;
 	onExit: () => void;
+	onSettings: () => void;
 	notice: string | null;
 }
 
-export function Hud({ game, onSave, onExit, notice }: Props) {
+export function Hud({ game, mode, onSave, onExit, onSettings, notice }: Props) {
 	const { view, speed, setSpeed, act } = game;
 	const over = view.status.state !== "running";
 	const cashClass = view.cash < 0 ? "stat bad" : "stat";
@@ -27,7 +30,14 @@ export function Hud({ game, onSave, onExit, notice }: Props) {
 			</div>
 			<div className="stat">
 				<span className="k">Time</span>
-				<span className="v">{formatClock(view.day, view.hour)}</span>
+				<span className="v">
+					{mode.kind === "daily" && view.day >= DAILY_DAYS
+						? `Day ${DAILY_DAYS} · final`
+						: formatClock(view.day, view.hour)}
+					{mode.kind === "daily" && (
+						<span className="muted"> / {DAILY_DAYS}</span>
+					)}
+				</span>
 			</div>
 			<div className={cashClass}>
 				<span className="k">Cash</span>
@@ -73,9 +83,20 @@ export function Hud({ game, onSave, onExit, notice }: Props) {
 				))}
 			</div>
 			<div className="spacer" />
+			<span className="mode">{modeLabel(mode)}</span>
 			{notice && <span className="notice">{notice}</span>}
-			<button type="button" className="ghost" onClick={onSave}>
-				Save
+			{mode.kind !== "daily" && (
+				<button type="button" className="ghost" onClick={onSave}>
+					Save
+				</button>
+			)}
+			<button
+				type="button"
+				className="ghost"
+				onClick={onSettings}
+				aria-label="Settings"
+			>
+				⚙
 			</button>
 			<button type="button" className="ghost" onClick={onExit}>
 				Menu

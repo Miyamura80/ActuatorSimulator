@@ -6,8 +6,11 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { setHum, sfx, stopHum } from "../audio/sfx";
 import { beaconState } from "../floor/status";
-import type { StationKind } from "../sim/types";
+import { DAILY_DAYS, dailyScore, type Mode } from "../modes";
+import { recordDailyResult } from "../settings";
+import type { GameEvent, StationKind } from "../sim/types";
 import { type Speed, useGame } from "../sim/useGame";
 import type { Sim } from "../sim/wasm";
 import { formatMoney } from "./format";
@@ -15,6 +18,7 @@ import { Hud } from "./Hud";
 import { Sidebar, type Tab } from "./Sidebar";
 import { StationCard } from "./StationCard";
 import { Toasts } from "./Toasts";
+import { Tutorial } from "./Tutorial";
 
 // three.js is the bulk of the bundle; load it after the menu.
 const FactoryFloor = lazy(() =>
@@ -23,22 +27,96 @@ const FactoryFloor = lazy(() =>
 
 const SPEED_KEYS: Record<string, Speed> = { "1": 1, "2": 2, "3": 4 };
 
-export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
-	const game = useGame(sim);
+function soundFor(e: GameEvent) {
+	switch (e.kind.type) {
+		case "shipped":
+			return sfx.cash;
+		case "contract_completed":
+			return sfx.good;
+		case "machine_bought":
+		case "maintenance_started":
+			return sfx.clunk;
+		default:
+			if (e.severity === "critical") return sfx.alarm;
+			if (e.severity === "warning") return sfx.warning;
+			return null;
+	}
+}
+
+interface Props {
+	sim: Sim;
+	mode: Mode;
+	onExit: () => void;
+	onSettings: () => void;
+	/** The settings dialog is open over the game. */
+	settingsOpen: boolean;
+	onTutorialDone: () => void;
+}
+
+export function GameScreen({
+	sim,
+	mode,
+	onExit,
+	onSettings,
+	settingsOpen,
+	onTutorialDone,
+}: Props) {
+	const game = useGame(sim, mode.kind !== "daily");
 	const [notice, setNotice] = useState<string | null>(null);
 	const [selected, setSelected] = useState<StationKind | null>(null);
 	const [tab, setTab] = useState<Tab>("contracts");
 	const [traceLot, setTraceLot] = useState<number | null>(null);
 	const { view, speed, setSpeed } = game;
-	const bankrupt = view.status.state === "bankrupt";
-	const exitRef = useRef<HTMLButtonElement>(null);
 	const noticeTimer = useRef<number | undefined>(undefined);
 	useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
+	const [tutorialOpen, setTutorialOpen] = useState(mode.kind === "tutorial");
 
-	// The game-over dialog is modal: move focus onto its only action.
+	// One sound per frame at most: the loudest thing that happened.
+	const heard = useRef(
+		game.events.length > 0 ? game.events[game.events.length - 1].seq : -1,
+	);
 	useEffect(() => {
-		if (bankrupt) exitRef.current?.focus();
-	}, [bankrupt]);
+		const fresh = game.events.filter((e) => e.seq > heard.current);
+		if (fresh.length === 0) return;
+		heard.current = fresh[fresh.length - 1].seq;
+		const rank = { critical: 3, good: 2, warning: 1, info: 0 } as const;
+		const loudest = [...fresh].sort(
+			(a, b) => rank[b.severity] - rank[a.severity],
+		)[0];
+		soundFor(loudest)?.();
+	}, [game.events]);
+
+	// Ambience follows how much of the line is running.
+	const busy =
+		view.stations.filter((s) => s.busy).length / view.stations.length;
+	useEffect(() => setHum(speed === 0 ? 0 : busy), [busy, speed]);
+	useEffect(() => stopHum, []);
+
+	// Daily challenge: stop at the final day (or bankruptcy) and record the score.
+	const dailyOver =
+		mode.kind === "daily" &&
+		(view.day >= DAILY_DAYS || view.status.state !== "running");
+	// End-of-run dialogs are modal: the page behind goes inert and focus
+	// moves onto the dialog's only action.
+	const modal = dailyOver || view.status.state === "bankrupt";
+	const exitRef = useRef<HTMLButtonElement>(null);
+	useEffect(() => {
+		if (modal) exitRef.current?.focus();
+	}, [modal]);
+
+	const recorded = useRef(false);
+	useEffect(() => {
+		if (!dailyOver || mode.kind !== "daily" || recorded.current) return;
+		recorded.current = true;
+		setSpeed(0);
+		recordDailyResult({
+			date: mode.date,
+			score: dailyScore(view),
+			cash: view.cash,
+			reputation: view.reputation,
+			bankrupt: view.status.state !== "running",
+		});
+	}, [dailyOver, mode, view, setSpeed]);
 
 	// Closing a card hands focus back to that station's strip button.
 	const closeCard = useCallback(() => {
@@ -59,6 +137,7 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			const t = e.target as HTMLElement;
+			if (modal || settingsOpen) return;
 			if (e.key === "Escape") {
 				closeCard();
 				return;
@@ -81,7 +160,22 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [speed, setSpeed, closeCard]);
+	}, [speed, setSpeed, closeCard, modal, settingsOpen]);
+
+	// Opening settings pauses the plant; closing it resumes at the old speed.
+	// Only the open/close transition drives this, so read speed via a ref.
+	const speedNow = useRef(speed);
+	speedNow.current = speed;
+	const beforeSettings = useRef<Speed>(0);
+	useEffect(() => {
+		if (settingsOpen) {
+			beforeSettings.current = speedNow.current;
+			setSpeed(0);
+		} else if (beforeSettings.current !== 0) {
+			setSpeed(beforeSettings.current);
+			beforeSettings.current = 0;
+		}
+	}, [settingsOpen, setSpeed]);
 
 	const save = async () => {
 		const name = `Day ${view.day + 1} · ${view.difficulty}`;
@@ -107,8 +201,15 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 
 	return (
 		<div className="game">
-			<div className="game-main" inert={bankrupt}>
-				<Hud game={game} onSave={save} onExit={onExit} notice={shown} />
+			<div className="game-main" inert={modal}>
+				<Hud
+					game={game}
+					mode={mode}
+					onSave={save}
+					onExit={onExit}
+					onSettings={onSettings}
+					notice={shown}
+				/>
 				<main className="board">
 					<section className="floor" aria-label="Factory floor">
 						<Suspense fallback={<div className="loading">Loading floor…</div>}>
@@ -131,6 +232,22 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 							onTrace={openTrace}
 							onStation={(k) => setSelected(k as StationKind)}
 						/>
+						{tutorialOpen && (
+							<Tutorial
+								view={view}
+								tab={tab}
+								speed={speed}
+								selected={selected}
+								onFinish={() => {
+									setTutorialOpen(false);
+									// The panel held focus; hand it to the first station.
+									document
+										.querySelector<HTMLButtonElement>("[data-station]")
+										?.focus();
+									onTutorialDone();
+								}}
+							/>
+						)}
 						{/* Keyboard and screen-reader route to every station. */}
 						<nav className="station-strip" aria-label="Stations">
 							{view.stations.map((st) => (
@@ -158,7 +275,39 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 					/>
 				</main>
 			</div>
-			{view.status.state === "bankrupt" && (
+			{dailyOver && (
+				<div className="overlay">
+					<div
+						className="dialog"
+						role="alertdialog"
+						aria-modal="true"
+						aria-labelledby="daily-title"
+						aria-describedby="daily-body"
+					>
+						<h2 id="daily-title">
+							Daily challenge · {mode.kind === "daily" ? mode.date : ""}
+						</h2>
+						<p id="daily-body">
+							{view.status.state === "running"
+								? `Day ${DAILY_DAYS} reached with ${formatMoney(view.cash)} and ${view.reputation.toFixed(0)} reputation.`
+								: "The plant went bankrupt before the final day."}
+						</p>
+						<p className="score">Score {formatMoney(dailyScore(view))}</p>
+						<p className="muted small">
+							Score is cash plus $2,000 per reputation point.
+						</p>
+						<button
+							ref={exitRef}
+							type="button"
+							className="primary"
+							onClick={onExit}
+						>
+							Back to menu
+						</button>
+					</div>
+				</div>
+			)}
+			{!dailyOver && view.status.state === "bankrupt" && (
 				<div className="overlay">
 					<div
 						className="dialog"

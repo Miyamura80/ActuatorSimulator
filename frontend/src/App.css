@@ -258,8 +258,9 @@ h2 {
 	display: flex;
 	flex-direction: column;
 }
-/* Wrapper only so a modal can make the page behind it inert. */
-.game-main {
+/* Wrappers only so a modal can make the page behind it inert. */
+.game-main,
+.screen {
 	display: contents;
 }
 .hud {
@@ -469,6 +470,7 @@ h2 {
 .overlay {
 	position: fixed;
 	inset: 0;
+	z-index: 50;
 	background: rgb(0 0 0 / 0.6);
 	display: grid;
 	place-items: center;
@@ -999,4 +1001,79 @@ select {
 	.sidebar {
 		min-height: 480px;
 	}
+}
+
+/* M6: quick actions, tutorial, settings, daily results */
+.quick {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.quick button {
+	padding: 10px 16px;
+}
+.hud .mode {
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--muted);
+}
+.tutorial {
+	position: absolute;
+	left: 12px;
+	bottom: 56px;
+	z-index: 5;
+	width: min(420px, calc(100% - 24px));
+	background: var(--panel);
+	border: 1px solid var(--hazard);
+	border-radius: 6px;
+	overflow: hidden;
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}
+.tutorial .hazard {
+	height: 6px;
+	border-radius: 0;
+}
+.tut-body {
+	padding: 12px 14px;
+}
+.tut-body h2 {
+	color: var(--text);
+	font-size: 20px;
+	margin: 2px 0 6px;
+}
+.tut-body p {
+	margin: 0 0 10px;
+	font-size: 16px;
+	line-height: 1.35;
+}
+.dialog.settings {
+	border-color: var(--line);
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+	width: min(100%, 420px);
+}
+.dialog.settings h2 {
+	color: var(--text);
+}
+.dialog .row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.dialog .row input[type="range"] {
+	flex: 1;
+	accent-color: var(--hazard);
+	width: auto;
+}
+.dialog h2 {
+	margin-bottom: 8px;
+}
+.score {
+	font-family: var(--mono);
+	font-size: 28px;
+	color: var(--hazard);
+	margin: 8px 0 2px;
 }
