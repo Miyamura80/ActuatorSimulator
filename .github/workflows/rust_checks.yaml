@@ -93,7 +93,7 @@ jobs:
       - name: Serve and smoke-test it
         run: |
           docker run -d --rm -p 8080:8080 --name web actuator-works-web
+          trap 'docker stop web >/dev/null 2>&1 || true' EXIT
           for i in $(seq 1 30); do curl -sf localhost:8080/ >/dev/null && break; sleep 1; done
           curl -sf localhost:8080/ | grep -q "Actuator Works"
           test "$(curl -s -o /dev/null -w '%{content_type}' localhost:8080/sim.wasm)" = "application/wasm"
-          docker stop web

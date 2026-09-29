@@ -8,8 +8,10 @@
 	encode zstd gzip
 	# Vite fingerprints everything under /assets, so it can be cached forever.
 	header /assets/* Cache-Control "public, max-age=31536000, immutable"
-	# sim.wasm keeps a stable name; revalidate it on each load.
+	# index.html and sim.wasm keep stable names; revalidate them on each load.
 	header /sim.wasm Cache-Control "no-cache"
+	header / Cache-Control "no-cache"
+	header /index.html Cache-Control "no-cache"
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
