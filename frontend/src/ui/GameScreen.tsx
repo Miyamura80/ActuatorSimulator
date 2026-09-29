@@ -240,6 +240,10 @@ export function GameScreen({
 								selected={selected}
 								onFinish={() => {
 									setTutorialOpen(false);
+									// The panel held focus; hand it to the first station.
+									document
+										.querySelector<HTMLButtonElement>("[data-station]")
+										?.focus();
 									onTutorialDone();
 								}}
 							/>
