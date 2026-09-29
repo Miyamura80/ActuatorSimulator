@@ -44,6 +44,13 @@ pub fn view(since: u64) -> Result<String, String> {
     with_game(|g| serde_json::to_string(&g.view(since)).map_err(|e| e.to_string()))?
 }
 
+pub fn trace(lot: u32) -> Result<String, String> {
+    with_game(|g| match sim::trace::report(g, sim::model::LotId(lot)) {
+        Some(r) => serde_json::to_string(&r).map_err(|e| e.to_string()),
+        None => Err(format!("no lot #{lot}")),
+    })?
+}
+
 pub fn save() -> Result<String, String> {
     with_game(|g| serde_json::to_string(g).map_err(|e| e.to_string()))?
 }
@@ -91,5 +98,7 @@ mod tests {
         let dangling = saved.replacen(r#""open_lot":null"#, r#""open_lot":424242"#, 1);
         assert_ne!(dangling, saved);
         assert!(load(&dangling).unwrap_err().contains("missing lot"));
+        assert!(trace(0).unwrap().contains("\"lot\":0"));
+        assert!(trace(999_999).is_err());
     }
 }

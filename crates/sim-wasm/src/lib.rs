@@ -102,6 +102,12 @@ pub extern "C" fn sim_view(since_hi: u32, since_lo: u32) -> u32 {
     finish(api::view(since))
 }
 
+/// Write the trace report for lot `lot` to the output buffer.
+#[no_mangle]
+pub extern "C" fn sim_trace(lot: u32) -> u32 {
+    finish(api::trace(lot))
+}
+
 /// Write the full save (JSON) to the output buffer.
 #[no_mangle]
 pub extern "C" fn sim_save() -> u32 {

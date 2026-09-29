@@ -1,14 +1,13 @@
-import type { Game } from "../sim/useGame";
-import { formatMoney, formatTick } from "./format";
+import type { Game } from "../../sim/useGame";
+import { formatMoney, formatTick } from "../format";
 
-export function Contracts({ game }: { game: Game }) {
+export function ContractsPanel({ game }: { game: Game }) {
 	const { view, act } = game;
 	const open = view.contracts.filter(
 		(c) => c.status === "offered" || c.status === "active",
 	);
 	return (
-		<section className="panel contracts">
-			<h2>Contracts</h2>
+		<div className="panel-body contracts">
 			{open.length === 0 && <p className="muted">No offers right now.</p>}
 			<ul>
 				{open.map((c) => {
@@ -66,6 +65,6 @@ export function Contracts({ game }: { game: Game }) {
 					);
 				})}
 			</ul>
-		</section>
+		</div>
 	);
 }

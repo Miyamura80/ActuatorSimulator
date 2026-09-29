@@ -85,9 +85,14 @@ pub fn decide(state: &GameState) -> Vec<Action> {
         actions.push(Action::Maintain { station: st.kind });
     }
 
+    // No capital spending while any part is short: cash goes to parts first.
+    let parts_ok = Item::PURCHASED.iter().all(|&item| {
+        let per_unit = if item == Item::Bearing { 2.0 } else { 1.0 };
+        f64::from(state.available(item)) >= cap * per_unit
+    });
     let neck = bottleneck(state);
     let price = neck.spec().machine_price;
-    if days_of_work > 8.0 && state.cash > price + CASH_BUFFER {
+    if parts_ok && days_of_work > 8.0 && state.cash > price + CASH_BUFFER {
         actions.push(Action::BuyMachine { station: neck });
     }
 
