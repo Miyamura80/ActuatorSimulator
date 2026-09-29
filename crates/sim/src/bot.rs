@@ -79,7 +79,9 @@ pub fn decide(state: &GameState) -> Vec<Action> {
     }
 
     // An SPC alarm means the process has shifted: stop and reset it.
-    for st in state.stations.iter().filter(|s| s.spc_alarm) {
+    let can_maintain =
+        |s: &&crate::model::Station| s.spc_alarm && s.machines.iter().any(|m| m.is_up());
+    for st in state.stations.iter().filter(can_maintain) {
         actions.push(Action::Maintain { station: st.kind });
     }
 

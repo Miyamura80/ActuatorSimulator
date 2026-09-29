@@ -25,9 +25,10 @@ pub fn tick(state: &mut GameState) {
             continue;
         }
         end_price_spike(state, i);
-        if state.rng.chance(BAD_LOT_ODDS * mult) {
-            // Silent: the player finds out at IQC, on the line, or in the field.
-            state.suppliers[i].bad_lots_pending += 1;
+        // Silent: the player finds out at IQC, on the line, or in the field.
+        // At most one excursion is pending, so idle suppliers do not stockpile them.
+        if state.suppliers[i].bad_lots_pending == 0 && state.rng.chance(BAD_LOT_ODDS * mult) {
+            state.suppliers[i].bad_lots_pending = 1;
         }
         if state.suppliers[i].price_spike_until.is_none()
             && state.rng.chance(PRICE_SPIKE_ODDS * mult)

@@ -186,15 +186,15 @@ After M2 (autopilot, 90 days; 30 seeds for Normal/Hard, 20 for Easy):
 
 | Difficulty | Survived | Mean cash | Scrap | Field failures | Breakdowns/run |
 |---|---|---|---|---|---|
-| Easy | 20/20 | 5.3M | 5.7% | 1.1% | 28 |
-| Normal | 28/30 | 1.3M | 8.1% | 1.2% | 36 |
-| Hard | 10/30 | 2k | 15.9% | 2.4% | 10 |
+| Easy | 20/20 | 5.5M | 5.7% | 1.1% | 24 |
+| Normal | 29/30 | 1.3M | 8.3% | 1.3% | 26 |
+| Hard | 15/30 | 30k | 14.7% | 2.3% | 9 |
 
 - Hard is brutal for the autopilot because it never changes suppliers or
   tightens IQC after a bad lot; a human reacting to events should do far
   better. Check once the UI exists.
 
-- Field failure rate (1 to 2% of shipped units) is dominated by latent
+- Field failure rate (about 1 to 1.3% of shipped units, 2.3% on Hard) is dominated by latent
   defects, which the EOL test cannot catch. Premium suppliers and PM are the
   levers; revisit the rate in M7 once a human has played it.
 - Reputation reaches 100 around day 45 on Normal; too fast.

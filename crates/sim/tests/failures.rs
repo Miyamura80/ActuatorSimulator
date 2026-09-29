@@ -165,7 +165,7 @@ fn supplier_events_happen_and_bankruptcy_reroutes_reorders() {
 }
 
 #[test]
-fn bad_lots_get_rejected_at_full_iqc() {
+fn bad_lots_get_rejected_at_sample_iqc() {
     let mut s = GameState::new(4, Difficulty::Normal);
     let magnets = s.policies.reorder[&Item::Magnets].supplier;
     s.suppliers[magnets.0 as usize].bad_lots_pending = 3;
@@ -190,4 +190,47 @@ fn bad_lots_get_rejected_at_full_iqc() {
             }
         )) > 0
     );
+}
+
+#[test]
+fn recall_does_not_charge_units_that_already_failed() {
+    let mut s = play_with(12, Difficulty::Hard, 45, |s| {
+        s.apply(Action::SetEol {
+            plan: InspectionPlan::Skip,
+        })
+        .unwrap();
+    });
+    let failed = s
+        .lots
+        .iter()
+        .find(|l| l.failed_in_field > 0 && !l.recalled)
+        .map(|l| (l.id, l.failed_in_field))
+        .expect("some shipped lot has already failed in the field");
+    let shipped: u32 = s
+        .shipments
+        .iter()
+        .flat_map(|sh| &sh.parts)
+        .filter(|p| p.lot == failed.0)
+        .map(|p| p.qty)
+        .sum();
+    let before = s.ledger.recalls;
+    s.apply(Action::Recall { lot: failed.0 }).unwrap();
+    let per_unit = 140.0 * s.tuning.rma_cost_mult;
+    let expected = (per_unit * f64::from(shipped - failed.1)).round() as i64;
+    assert_eq!(s.ledger.recalls - before, expected);
+}
+
+#[test]
+fn recall_scraps_open_wip_lots() {
+    let mut s = GameState::new(3, Difficulty::Normal);
+    s.run_hours(10);
+    let st = s
+        .stations
+        .iter()
+        .find(|st| st.open_lot.is_some())
+        .expect("a lot is being filled");
+    let open = st.open_lot.unwrap();
+    s.apply(Action::ScrapLot { lot: open }).unwrap();
+    assert_eq!(s.lot(open).status, LotStatus::Scrapped);
+    assert!(s.stations.iter().all(|st| st.open_lot != Some(open)));
 }

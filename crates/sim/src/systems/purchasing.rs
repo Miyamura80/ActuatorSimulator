@@ -130,8 +130,8 @@ fn receive(state: &mut GameState, id: OrderId) {
     if state.suppliers[order.supplier.0 as usize].bad_lots_pending > 0 {
         state.suppliers[order.supplier.0 as usize].bad_lots_pending -= 1;
         let mult = state.rng.range_f64(10.0, 25.0);
-        defect_rate = (defect_rate * mult).max(0.08);
-        latent_rate = (latent_rate * mult).max(0.01);
+        defect_rate = (defect_rate * mult).clamp(0.08, 0.4);
+        latent_rate = (latent_rate * mult).clamp(0.01, 0.1);
     }
     let defects = state.rng.binomial(order.qty, defect_rate);
     let latent = state.rng.binomial(order.qty - defects, latent_rate);

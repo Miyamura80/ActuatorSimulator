@@ -205,6 +205,7 @@ impl GameState {
             created: self.tick,
             status,
             recalled: false,
+            failed_in_field: 0,
         });
         if status == LotStatus::Available && qty > 0 {
             self.stock.entry(item).or_default().push_back(id);

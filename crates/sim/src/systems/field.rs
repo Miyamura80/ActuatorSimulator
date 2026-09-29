@@ -74,6 +74,7 @@ fn rma(state: &mut GameState, contract: ContractId, lot: LotId, doa: bool, units
     state.spend(cost, |l| &mut l.rma);
     state.reputation = (state.reputation - rep).max(0.0);
     state.today.field_failures += units;
+    state.lots[lot.0 as usize].failed_in_field += units;
     let what = if doa {
         "dead on arrival"
     } else {
@@ -103,13 +104,21 @@ pub fn recall(state: &mut GameState, lot: LotId) -> Result<(), String> {
     }
     let mut targets = trace::descendants(state, lot);
     targets.insert(lot);
-    let shipped: u32 = state
+    let live = |id: &LotId| targets.contains(id) && !state.lot(*id).recalled;
+    let shipped_total: u32 = state
         .shipments
         .iter()
         .flat_map(|s| &s.parts)
-        .filter(|p| targets.contains(&p.lot) && !state.lot(p.lot).recalled)
+        .filter(|p| live(&p.lot))
         .map(|p| p.qty)
         .sum();
+    // Units that already came back as RMAs were paid for once; don't charge twice.
+    let already_failed: u32 = targets
+        .iter()
+        .filter(|id| live(id))
+        .map(|id| state.lot(*id).failed_in_field)
+        .sum();
+    let shipped = shipped_total.saturating_sub(already_failed);
     let scrapped: u32 = targets.iter().map(|id| scrap_units(state, *id)).sum();
     if shipped == 0 && scrapped == 0 {
         return Err("nothing from this lot is in the field or in stock".into());
@@ -158,12 +167,19 @@ pub fn scrap(state: &mut GameState, lot: LotId) -> Result<(), String> {
 /// Remove a lot's remaining stock. Returns the units scrapped.
 fn scrap_units(state: &mut GameState, id: LotId) -> u32 {
     let l = &state.lots[id.0 as usize];
-    if l.status != LotStatus::Available || l.qty == 0 {
+    let in_plant = matches!(l.status, LotStatus::Available | LotStatus::Open);
+    if !in_plant || l.qty == 0 {
         return 0;
     }
     let (item, qty) = (l.item, l.qty);
     if let Some(q) = state.stock.get_mut(&item) {
         q.retain(|x| *x != id);
+    }
+    // A lot still being filled at a station: stop adding to it.
+    for st in &mut state.stations {
+        if st.open_lot == Some(id) {
+            st.open_lot = None;
+        }
     }
     let l = &mut state.lots[id.0 as usize];
     l.status = LotStatus::Scrapped;

@@ -95,6 +95,9 @@ pub struct Lot {
     /// Shipped units from this lot were recalled.
     #[serde(default)]
     pub recalled: bool,
+    /// Shipped units from this lot that already failed at a customer.
+    #[serde(default)]
+    pub failed_in_field: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

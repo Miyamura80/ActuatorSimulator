@@ -81,14 +81,20 @@ fn auto_pm(state: &mut GameState, idx: usize) {
         .iter()
         .position(|m| m.is_up() && m.hours_since_pm >= st.pm_interval);
     if let Some(i) = due {
-        start_pm(state, idx, i, false);
+        // Scheduled maintenance waits when the plant cannot pay for it.
+        let _ = start_pm(state, idx, i, false);
     }
 }
 
 /// Take machine `i` offline for preventive maintenance.
-fn start_pm(state: &mut GameState, idx: usize, i: usize, manual: bool) {
+fn start_pm(state: &mut GameState, idx: usize, i: usize, manual: bool) -> Result<(), String> {
     let kind = state.stations[idx].kind;
     let cost = (kind.spec().machine_price as f64 * PM_COST_FRACTION).round() as i64;
+    if state.cash - cost < -state.tuning.overdraft_limit {
+        return Err(format!(
+            "not enough cash or credit for ${cost} of maintenance"
+        ));
+    }
     state.spend(cost, |l| &mut l.maintenance);
     let now = state.tick;
     let st = &mut state.stations[idx];
@@ -100,6 +106,8 @@ fn start_pm(state: &mut GameState, idx: usize, i: usize, manual: bool) {
     // New tooling and a fresh setup put the process back on center.
     st.drift = 0.0;
     st.spc_alarm = false;
+    // Old samples describe the old setup; start the chart fresh.
+    st.spc.clear();
     let msg = if manual {
         format!("Maintenance started on {} (${cost})", kind.label())
     } else {
@@ -113,6 +121,7 @@ fn start_pm(state: &mut GameState, idx: usize, i: usize, manual: bool) {
             cost,
         },
     );
+    Ok(())
 }
 
 /// Player-requested maintenance on the most worn working machine.
@@ -126,11 +135,15 @@ pub fn maintain(state: &mut GameState, kind: StationKind) -> Result<(), String> 
         .min_by(|a, b| a.1.condition.total_cmp(&b.1.condition))
         .map(|(i, _)| i)
         .ok_or("no working machine to maintain")?;
-    start_pm(state, idx, worst, true);
-    Ok(())
+    start_pm(state, idx, worst, true)
 }
 
+/// Machines only wear out while they work: an idle (starved or blocked)
+/// station does not roll for breakdowns.
 fn roll_breakdowns(state: &mut GameState, idx: usize) {
+    if !state.stations[idx].busy {
+        return;
+    }
     let kind = state.stations[idx].kind;
     let mult = state.tuning.breakdown_mult;
     for i in 0..state.stations[idx].machines.len() {
@@ -214,8 +227,16 @@ fn sample_spc(state: &mut GameState, idx: usize) {
         return;
     }
     let condition = {
-        let ms = &state.stations[idx].machines;
-        ms.iter().map(|m| m.condition).sum::<f64>() / ms.len() as f64
+        let live: Vec<f64> = state.stations[idx]
+            .machines
+            .iter()
+            .filter(|m| m.is_up())
+            .map(|m| m.condition)
+            .collect();
+        if live.is_empty() {
+            return;
+        }
+        live.iter().sum::<f64>() / live.len() as f64
     };
     let sigma = 1.0 + 0.2 * (1.0 - condition / 100.0);
     let drift = state.stations[idx].drift;
