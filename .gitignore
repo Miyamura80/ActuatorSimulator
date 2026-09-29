@@ -16,6 +16,8 @@ docs/.vite/
 
 # Rust
 target/
+# Built by `make wasm`
+frontend/public/sim.wasm
 src-tauri/target/
 
 # Bun lock cache

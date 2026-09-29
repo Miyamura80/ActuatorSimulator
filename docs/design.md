@@ -169,6 +169,18 @@ frequency, machine wear, and contract strictness: Easy / Normal / Hard.
     units ($140 each, -1.5 rep flat), cancels their pending failures and scraps
     remaining stock.
 
+- **WASM bridge is a plain C ABI** (`crates/sim-wasm`): JSON strings through
+  linear memory, about 60 lines of TS on the other side. No wasm-bindgen CLI to
+  pin in CI or Docker. The module is 650 KB (170 KB gzipped) with the `wasm`
+  build profile.
+- **The UI sees a `View`, never the state**: `GameState::view` leaves out
+  hidden defect counts, supplier quality numbers, drift, pending field
+  failures and true arrival dates, so the browser cannot leak them.
+- **Saves** are the full state JSON in IndexedDB, with an autosave slot written
+  once per game day. `SAVE_VERSION` mismatches are refused on load.
+- **Game speed**: 1x is 2 game hours per real second (a 90-day game is about
+  18 minutes); 2x and 4x multiply it.
+
 ## Balance Notes (open for M7)
 
 M1 baseline, autopilot, 20 seeds x 90 days:

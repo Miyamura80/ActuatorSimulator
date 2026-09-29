@@ -1,0 +1,13 @@
+[package]
+name = "sim-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "Browser bridge for the sim crate: a C-ABI WebAssembly module that speaks JSON"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+sim = { path = "../sim" }
+serde_json = { version = "1", features = ["float_roundtrip"] }

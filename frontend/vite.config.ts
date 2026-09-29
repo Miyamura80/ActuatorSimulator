@@ -1,14 +1,12 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// The frontend is an optional visualization layer over the `actsim serve`
-// HTTP API. `vite` is invoked with this directory as its root (see the
+// The game runs the simulation in the browser (public/sim.wasm, built by
+// `make wasm`). `vite` is invoked with this directory as its root (see the
 // `dev`/`build` scripts in the repo-root package.json).
 //
-// In development, `/api` (and `/healthz`) are proxied to `actsim serve` so the
-// browser calls the same HTTP API it will hit in production, without CORS
-// gymnastics. Override the target with `VITE_API_PROXY` if the server binds
-// elsewhere.
+// `/api` (and `/healthz`) are still proxied to `actsim serve` for debugging
+// tools that want the HTTP API. Override the target with `VITE_API_PROXY`.
 
 // @ts-expect-error process is a nodejs global
 const apiProxyTarget = process.env.VITE_API_PROXY || "http://127.0.0.1:8080";
