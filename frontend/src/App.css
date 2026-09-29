@@ -300,7 +300,7 @@ h2 {
 	min-height: 0;
 	display: grid;
 	grid-template-columns: 1fr 360px;
-	grid-template-rows: auto 1fr;
+	grid-template-rows: minmax(440px, 1fr) minmax(0, 300px);
 	gap: 12px;
 	padding: 12px;
 }
@@ -311,8 +311,12 @@ h2 {
 	padding: 12px;
 	min-height: 0;
 }
-.line {
+.floor {
 	grid-column: 1;
+	position: relative;
+	padding: 0;
+	overflow: hidden;
+	min-height: 440px;
 }
 .contracts {
 	grid-column: 1;
@@ -492,4 +496,105 @@ h2 {
 	.difficulty {
 		grid-template-columns: 1fr;
 	}
+}
+
+/* 3D floor labels and station card */
+.floor-label {
+	font-family: var(--font);
+	font-size: 13px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	white-space: nowrap;
+	padding: 2px 8px;
+	border-radius: 3px;
+	background: rgb(18 20 22 / 0.85);
+	border-left: 3px solid var(--muted);
+	color: var(--text);
+	pointer-events: none;
+	user-select: none;
+}
+.floor-label.dock {
+	border-left-color: var(--hazard);
+	color: var(--hazard);
+}
+.floor-label.selected {
+	outline: 1px solid var(--hazard);
+}
+.beacon-running {
+	border-left-color: var(--ok);
+}
+.beacon-starved,
+.beacon-alarm,
+.beacon-degraded {
+	border-left-color: var(--warn);
+}
+.beacon-broken {
+	border-left-color: var(--bad);
+}
+.beacon-maintenance {
+	border-left-color: var(--info);
+}
+.station-card {
+	position: absolute;
+	top: 12px;
+	left: 12px;
+	width: 300px;
+	background: rgb(27 31 35 / 0.95);
+	border: 1px solid var(--line);
+	border-top: 3px solid var(--hazard);
+	border-radius: 6px;
+	padding: 10px 12px;
+}
+.station-card header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.station-card .close {
+	margin-left: auto;
+	padding: 0 8px;
+}
+.pill {
+	font-size: 12px;
+	text-transform: uppercase;
+	padding: 1px 6px;
+	border-radius: 3px;
+	border-left: 3px solid var(--muted);
+	background: var(--panel-2);
+}
+.station-card .machines {
+	list-style: none;
+	padding: 0;
+	margin: 10px 0;
+}
+.station-card .machines li {
+	display: grid;
+	grid-template-columns: 80px auto 1fr;
+	gap: 8px;
+	align-items: center;
+	font-size: 14px;
+	padding: 2px 0;
+}
+.station-card .actions {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.floor-canvas {
+	position: absolute;
+	inset: 0;
+}
+.label-layer {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	overflow: hidden;
+}
+.label-layer .floor-label {
+	position: absolute;
+	left: 0;
+	top: 0;
+	will-change: transform;
 }
