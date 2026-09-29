@@ -27,17 +27,39 @@ export function Sidebar({ game, tab, setTab, traceLot, setTraceLot }: Props) {
 		{ id: "stats", label: "Stats" },
 		{ id: "log", label: "Log" },
 	];
+	// Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
+	const onKey = (e: React.KeyboardEvent, i: number) => {
+		const last = tabs.length - 1;
+		const to =
+			e.key === "ArrowRight"
+				? (i + 1) % tabs.length
+				: e.key === "ArrowLeft"
+					? (i + last) % tabs.length
+					: e.key === "Home"
+						? 0
+						: e.key === "End"
+							? last
+							: null;
+		if (to === null) return;
+		e.preventDefault();
+		setTab(tabs[to].id);
+		document.getElementById(`tab-${tabs[to].id}`)?.focus();
+	};
 	return (
 		<aside className="sidebar">
-			<div className="tabs" role="tablist">
-				{tabs.map((t) => (
+			<div className="tabs" role="tablist" aria-label="Plant management">
+				{tabs.map((t, i) => (
 					<button
 						type="button"
 						role="tab"
 						key={t.id}
+						id={`tab-${t.id}`}
 						aria-selected={tab === t.id}
+						aria-controls={`panel-${t.id}`}
+						tabIndex={tab === t.id ? 0 : -1}
 						className={tab === t.id ? "on" : ""}
 						onClick={() => setTab(t.id)}
+						onKeyDown={(e) => onKey(e, i)}
 					>
 						{t.label}
 						{t.badge ? (
@@ -46,7 +68,12 @@ export function Sidebar({ game, tab, setTab, traceLot, setTraceLot }: Props) {
 					</button>
 				))}
 			</div>
-			<div className="tab-body">
+			<div
+				className="tab-body"
+				role="tabpanel"
+				id={`panel-${tab}`}
+				aria-labelledby={`tab-${tab}`}
+			>
 				{tab === "contracts" && <ContractsPanel game={game} />}
 				{tab === "supply" && <SupplyPanel game={game} />}
 				{tab === "quality" && (

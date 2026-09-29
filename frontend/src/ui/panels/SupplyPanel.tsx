@@ -2,7 +2,8 @@ import { useState } from "react";
 import type { Item, SupplierView } from "../../sim/types";
 import type { Game } from "../../sim/useGame";
 import { formatMoney, formatTick } from "../format";
-import { PLAN_OPTIONS, planFromKey, planKey } from "./plans";
+import { IntField } from "../IntField";
+import { planFromKey, planKey, planOptions } from "./plans";
 
 function tierLabel(s: SupplierView) {
 	const record =
@@ -23,6 +24,9 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 	const suppliers = view.suppliers.filter((s) => s.item === item);
 	if (!stock || !policy) return null;
 	const current = suppliers.find((s) => s.id === policy.supplier);
+	// The sim rounds small orders up to the supplier minimum; make that visible
+	// instead of charging for units the player did not ask for.
+	const belowMin = current !== undefined && qty < current.min_order;
 	const setPolicy = (patch: Partial<typeof policy>) =>
 		setError(act({ type: "set_reorder", item, ...policy, ...patch }));
 
@@ -76,7 +80,7 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 									)
 								}
 							>
-								{PLAN_OPTIONS.map((o) => (
+								{planOptions(view.policies.iqc[item]).map((o) => (
 									<option key={o.key} value={o.key}>
 										{o.label}
 									</option>
@@ -85,26 +89,18 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 						</label>
 						<label>
 							Reorder below
-							<input
-								type="number"
+							<IntField
 								min={0}
 								value={policy.reorder_point}
-								onChange={(e) =>
-									setPolicy({
-										reorder_point: Math.max(0, Number(e.target.value)),
-									})
-								}
+								onCommit={(n) => setPolicy({ reorder_point: n })}
 							/>
 						</label>
 						<label>
 							Order quantity
-							<input
-								type="number"
+							<IntField
 								min={1}
 								value={policy.order_qty}
-								onChange={(e) =>
-									setPolicy({ order_qty: Math.max(1, Number(e.target.value)) })
-								}
+								onCommit={(n) => setPolicy({ order_qty: n })}
 							/>
 						</label>
 					</div>
@@ -133,11 +129,11 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 						</tbody>
 					</table>
 					<div className="order-row">
-						<input
-							type="number"
+						<IntField
+							label="Order quantity"
 							min={1}
 							value={qty}
-							onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+							onCommit={setQty}
 						/>
 						<label className="check">
 							<input
@@ -150,6 +146,7 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 						<button
 							type="button"
 							className="primary"
+							disabled={belowMin}
 							onClick={() =>
 								setError(
 									act({
@@ -163,6 +160,11 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 						>
 							Order
 						</button>
+						{current && (
+							<span className={belowMin ? "warn-text small" : "muted small"}>
+								{current.name} minimum: {current.min_order}
+							</span>
+						)}
 					</div>
 					{error && (
 						<p className="error" role="alert">

@@ -1,4 +1,11 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { beaconState } from "../floor/status";
 import type { StationKind } from "../sim/types";
 import { type Speed, useGame } from "../sim/useGame";
@@ -34,36 +41,47 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	}, [bankrupt]);
 
 	// Closing a card hands focus back to that station's strip button.
-	const closeCard = () => {
-		const kind = selected;
-		setSelected(null);
-		document
-			.querySelector<HTMLButtonElement>(`[data-station="${kind}"]`)
-			?.focus();
-	};
+	const closeCard = useCallback(() => {
+		setSelected((kind) => {
+			if (kind) {
+				document
+					.querySelector<HTMLButtonElement>(`[data-station="${kind}"]`)
+					?.focus();
+			}
+			return null;
+		});
+	}, []);
 
-	// Space toggles pause; 1/2/3 pick a speed. Ignored while typing in a field.
+	// Space toggles pause; 1/2/3 pick a speed; Esc closes the station card.
+	// Space and digits are left alone in form fields and on buttons, where
+	// they mean something already (Space presses a focused button).
+	const resume = useRef<Speed>(1);
 	useEffect(() => {
-		let resume: Speed = 1;
 		const onKey = (e: KeyboardEvent) => {
 			const t = e.target as HTMLElement;
-			if (["INPUT", "SELECT", "TEXTAREA"].includes(t.tagName)) return;
+			if (e.key === "Escape") {
+				closeCard();
+				return;
+			}
+			if (
+				t.isContentEditable ||
+				t.closest("button, a, input, select, textarea")
+			)
+				return;
 			if (e.code === "Space") {
 				e.preventDefault();
-				if (speed === 0) setSpeed(resume);
+				if (speed === 0) setSpeed(resume.current);
 				else {
-					resume = speed;
+					resume.current = speed;
 					setSpeed(0);
 				}
 			} else if (SPEED_KEYS[e.key]) {
 				setSpeed(SPEED_KEYS[e.key]);
-			} else if (e.key === "Escape") {
-				setSelected(null);
 			}
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [speed, setSpeed]);
+	}, [speed, setSpeed, closeCard]);
 
 	const save = async () => {
 		const name = `Day ${view.day + 1} · ${view.difficulty}`;

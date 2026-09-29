@@ -137,6 +137,15 @@ export function LineChart({
 				/>
 			))}
 			<path d={d} className="chart-line" />
+			{values.length === 1 && (
+				// A lone reading has no line to draw; mark the point instead.
+				<circle
+					cx={x(0)}
+					cy={y(Math.min(hi, Math.max(lo, values[0])))}
+					r={3}
+					className="chart-dot"
+				/>
+			)}
 			<Hover
 				i={hover !== null && hover >= 0 && hover < values.length ? hover : null}
 				x={x(hover ?? 0)}

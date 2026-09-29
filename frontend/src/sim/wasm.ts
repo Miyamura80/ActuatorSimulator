@@ -76,6 +76,8 @@ export class Sim {
 
 	/** Records for one lot, or null if it does not exist. */
 	trace(lot: number): TraceReport | null {
+		// Lot ids are u32 on the Rust side; anything else would wrap.
+		if (!Number.isInteger(lot) || lot < 0 || lot > 0xffff_ffff) return null;
 		if (this.x.sim_trace(lot) !== 0) return null;
 		return JSON.parse(this.output()) as TraceReport;
 	}

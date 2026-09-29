@@ -56,6 +56,11 @@ button.primary {
 button.ghost {
 	background: transparent;
 }
+button.danger {
+	border-color: var(--bad);
+	color: var(--bad);
+	font-weight: 700;
+}
 button:focus-visible {
 	outline: 2px solid var(--hazard);
 	outline-offset: 2px;
@@ -478,10 +483,6 @@ h2 {
 }
 
 @media (max-width: 900px) {
-	.board {
-		grid-template-columns: 1fr;
-		grid-template-rows: none;
-	}
 	.difficulty {
 		grid-template-columns: 1fr;
 	}
@@ -808,7 +809,7 @@ select {
 	flex-wrap: wrap;
 	margin-top: 6px;
 }
-.order-row input {
+.order-row input:not([type="checkbox"]) {
 	width: 90px;
 }
 .orders li,
@@ -935,6 +936,9 @@ select {
 	fill: var(--muted);
 	font-family: var(--mono);
 	font-size: 9px;
+}
+.chart-dot {
+	fill: #64a8ff;
 }
 .chart-line {
 	fill: none;

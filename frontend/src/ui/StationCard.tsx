@@ -4,6 +4,7 @@ import type { StationKind } from "../sim/types";
 import type { Game } from "../sim/useGame";
 import { LineChart } from "./charts";
 import { formatMoney } from "./format";
+import { IntField } from "./IntField";
 
 const STATE_LABEL = {
 	running: "Running",
@@ -26,6 +27,8 @@ interface Props {
 export function StationCard({ game, kind, onClose }: Props) {
 	const { view, act } = game;
 	const [error, setError] = useState<string | null>(null);
+	// Selling is permanent and returns half the price: ask once first.
+	const [confirmSell, setConfirmSell] = useState(false);
 	const closeRef = useRef<HTMLButtonElement>(null);
 	// A newly opened card takes focus so keyboard and screen-reader users land
 	// in it. (GameScreen keys the card by station, so errors reset too.)
@@ -33,6 +36,9 @@ export function StationCard({ game, kind, onClose }: Props) {
 	const st = view.stations.find((s) => s.kind === kind);
 	if (!st) return null;
 	const state = beaconState(st, view.operating);
+	// The sim sells the most worn machine at half price scaled by condition.
+	const worst = Math.min(...st.machines.map((m) => m.condition));
+	const resale = Math.round((st.machine_price * 0.5 * worst) / 100);
 	const run = (err: string | null) => setError(err);
 	const inputs = st.inputs
 		.map(
@@ -108,18 +114,11 @@ export function StationCard({ game, kind, onClose }: Props) {
 				</label>
 				<label>
 					Buffer cap
-					<input
-						type="number"
+					<IntField
 						min={1}
 						value={st.wip_cap}
-						onChange={(e) =>
-							run(
-								act({
-									type: "set_wip_cap",
-									station: kind,
-									cap: Math.max(1, Number(e.target.value)),
-								}),
-							)
+						onCommit={(cap) =>
+							run(act({ type: "set_wip_cap", station: kind, cap }))
 						}
 					/>
 				</label>
@@ -137,14 +136,36 @@ export function StationCard({ game, kind, onClose }: Props) {
 				>
 					Buy ({formatMoney(st.machine_price)})
 				</button>
-				<button
-					type="button"
-					className="ghost"
-					disabled={st.machines.length <= 1}
-					onClick={() => run(act({ type: "sell_machine", station: kind }))}
-				>
-					Sell worst
-				</button>
+				{confirmSell ? (
+					<>
+						<button
+							type="button"
+							className="danger"
+							onClick={() => {
+								setConfirmSell(false);
+								run(act({ type: "sell_machine", station: kind }));
+							}}
+						>
+							Sell for {formatMoney(resale)}?
+						</button>
+						<button
+							type="button"
+							className="ghost"
+							onClick={() => setConfirmSell(false)}
+						>
+							Keep
+						</button>
+					</>
+				) : (
+					<button
+						type="button"
+						className="ghost"
+						disabled={st.machines.length <= 1}
+						onClick={() => setConfirmSell(true)}
+					>
+						Sell worst
+					</button>
+				)}
 			</div>
 			{error && (
 				<p className="error" role="alert">

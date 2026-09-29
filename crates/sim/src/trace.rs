@@ -93,9 +93,10 @@ pub fn report(state: &GameState, lot: LotId) -> Option<TraceReport> {
         .filter(|id| supplier_of(state, *id).is_some())
         .map(|id| line(state, id))
         .collect();
-    let mut finished = descendants(state, lot);
-    finished.insert(lot);
-    let finished: Vec<LotId> = finished
+    let mut related = descendants(state, lot);
+    related.insert(lot);
+    // A set for membership tests against every shipment part.
+    let finished: BTreeSet<LotId> = related
         .into_iter()
         .filter(|id| state.lot(*id).item == crate::Item::FinishedGood)
         .collect();

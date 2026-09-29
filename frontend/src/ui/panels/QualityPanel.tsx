@@ -3,7 +3,7 @@ import type { GameEvent } from "../../sim/types";
 import type { Game } from "../../sim/useGame";
 import { LineChart } from "../charts";
 import { formatTick } from "../format";
-import { PLAN_OPTIONS, planFromKey, planKey } from "./plans";
+import { planFromKey, planKey, planOptions } from "./plans";
 
 const QUALITY_EVENTS = new Set([
 	"iqc_rejected",
@@ -28,7 +28,17 @@ function TraceView({
 }) {
 	const [error, setError] = useState<string | null>(null);
 	const r = game.trace(lot);
-	if (!r) return <p className="error">No lot #{lot}.</p>;
+	if (!r)
+		return (
+			<div className="trace">
+				<p className="error" role="alert">
+					No lot #{lot}.
+				</p>
+				<button type="button" className="ghost" onClick={onClose}>
+					Close trace
+				</button>
+			</div>
+		);
 	const itemLabel = (item: string) =>
 		game.view.stock.find((s) => s.item === item)?.label ?? item;
 	const stationLabel = game.view.stations.find(
@@ -146,7 +156,7 @@ export function QualityPanel({ game, traceLot, setTraceLot }: Props) {
 							act({ type: "set_eol", plan: planFromKey(e.target.value) })
 						}
 					>
-						{PLAN_OPTIONS.map((o) => (
+						{planOptions(view.policies.eol).map((o) => (
 							<option key={o.key} value={o.key}>
 								{o.label}
 							</option>
@@ -163,7 +173,8 @@ export function QualityPanel({ game, traceLot, setTraceLot }: Props) {
 				onSubmit={(e) => {
 					e.preventDefault();
 					const n = Number(lotInput);
-					if (Number.isInteger(n) && n >= 0) setTraceLot(n);
+					if (lotInput.trim() !== "" && Number.isSafeInteger(n) && n >= 0)
+						setTraceLot(n);
 				}}
 			>
 				<input

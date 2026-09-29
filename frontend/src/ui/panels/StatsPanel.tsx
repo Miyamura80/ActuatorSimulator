@@ -15,8 +15,9 @@ export function StatsPanel({ game }: { game: Game }) {
 	const profit7 = revenue7 - sum(week, (d) => d.costs);
 	const produced = sum(week, (d) => d.produced);
 	const scrapped = sum(week, (d) => d.scrapped);
+	// No output this week means no yield to report, not a perfect one.
 	const yieldPct =
-		produced + scrapped > 0 ? (produced / (produced + scrapped)) * 100 : 100;
+		produced + scrapped > 0 ? (produced / (produced + scrapped)) * 100 : null;
 	const shippedAll = sum(h, (d) => d.shipped);
 	const failuresAll = sum(h, (d) => d.field_failures);
 	const l = view.ledger;
@@ -36,10 +37,12 @@ export function StatsPanel({ game }: { game: Game }) {
 				</div>
 				<div className="kpi">
 					<span className="k">First-pass yield</span>
-					<span className="v">{yieldPct.toFixed(1)}%</span>
+					<span className="v">
+						{yieldPct === null ? "n/a" : `${yieldPct.toFixed(1)}%`}
+					</span>
 				</div>
 				<div className="kpi">
-					<span className="k">Field failures</span>
+					<span className="k">Field failures, {h.length} days</span>
 					<span className="v">
 						{shippedAll > 0
 							? ((failuresAll / shippedAll) * 100).toFixed(2)
@@ -77,7 +80,7 @@ export function StatsPanel({ game }: { game: Game }) {
 					{ label: "Inspection", value: l.inspection },
 				]}
 			/>
-			<h3>Quality losses (counts, all time)</h3>
+			<h3>Quality losses (counts, last {h.length} days)</h3>
 			<Pareto
 				format={(v) => String(v)}
 				rows={[

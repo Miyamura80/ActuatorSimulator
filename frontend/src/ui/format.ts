@@ -22,7 +22,8 @@ export function formatTick(tick: number): string {
 export function formatMoneyCompact(n: number): string {
 	const sign = n < 0 ? "-" : "";
 	const a = Math.abs(n);
-	if (a >= 1e6) return `${sign}$${(a / 1e6).toFixed(1)}M`;
-	if (a >= 1e3) return `${sign}$${Math.round(a / 1e3)}k`;
+	// Switch units on the rounded value so $999,600 reads $1.0M, not $1000k.
+	if (Math.round(a / 1e3) >= 1000) return `${sign}$${(a / 1e6).toFixed(1)}M`;
+	if (Math.round(a) >= 1000) return `${sign}$${Math.round(a / 1e3)}k`;
 	return `${sign}$${Math.round(a)}`;
 }

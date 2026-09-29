@@ -1,6 +1,6 @@
 import type { InspectionPlan } from "../../sim/types";
 
-export const PLAN_OPTIONS: {
+const PLAN_OPTIONS: {
 	key: string;
 	label: string;
 	plan: InspectionPlan;
@@ -15,12 +15,26 @@ export const PLAN_OPTIONS: {
 export function planKey(p: InspectionPlan | undefined): string {
 	if (!p || p.mode === "skip") return "skip";
 	if (p.mode === "full") return "full";
-	const match = PLAN_OPTIONS.find(
-		(o) => o.plan.mode === "sample" && o.plan.percent === p.percent,
-	);
-	return match?.key ?? "s5";
+	return `s${p.percent}`;
+}
+
+/** The preset options, plus the current plan if it is not one of them. */
+export function planOptions(current: InspectionPlan | undefined) {
+	const key = planKey(current);
+	if (current?.mode !== "sample" || PLAN_OPTIONS.some((o) => o.key === key)) {
+		return PLAN_OPTIONS;
+	}
+	return [
+		...PLAN_OPTIONS,
+		{ key, label: `Sample ${current.percent}%`, plan: current },
+	];
 }
 
 export function planFromKey(key: string): InspectionPlan {
-	return PLAN_OPTIONS.find((o) => o.key === key)?.plan ?? { mode: "skip" };
+	const preset = PLAN_OPTIONS.find((o) => o.key === key)?.plan;
+	if (preset) return preset;
+	const percent = Number(key.slice(1));
+	return key.startsWith("s") && Number.isInteger(percent) && percent > 0
+		? { mode: "sample", percent }
+		: { mode: "skip" };
 }

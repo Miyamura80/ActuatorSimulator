@@ -199,7 +199,8 @@ M1 baseline, autopilot, 20 seeds x 90 days:
 - Easy/Normal snowball once a few machines are bought; needs cost pressure
   (maintenance, breakdowns, RMAs from M2) and a softer contract size curve.
 
-After M2 (autopilot, 90 days; 30 seeds for Normal/Hard, 20 for Easy):
+After M5 (default reorder policy 180/200, autopilot capex guard; autopilot, 90 days;
+30 seeds for Normal/Hard, 20 for Easy):
 
 | Difficulty | Survived | Mean cash | Scrap | Field failures | Breakdowns/run |
 |---|---|---|---|---|---|

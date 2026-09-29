@@ -16,6 +16,12 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
+			"a11y": {
+				"noLabelWithoutControl": {
+					"level": "error",
+					"options": { "inputComponents": ["IntField"] }
+				}
+			},
 			"style": {
 				"noDescendingSpecificity": "off"
 			},

@@ -40,8 +40,10 @@ export function Toasts({ events, onTrace, onStation }: Props) {
 			for (const e of fresh) {
 				const same = next.findIndex((x) => x.message === e.message);
 				if (same >= 0) {
+					// A repeat moves to the newest slot, so the cap below keeps it.
 					const repeats = Number(next[same].kind.repeats ?? 1) + 1;
-					next[same] = { ...e, kind: { ...e.kind, repeats } };
+					next.splice(same, 1);
+					next.push({ ...e, kind: { ...e.kind, repeats } });
 				} else next.push(e);
 			}
 			return next.slice(-MAX);
