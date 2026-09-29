@@ -21,6 +21,8 @@ fn close_day(state: &mut GameState) {
         shipped,
         scrapped,
         iqc_rejects,
+        field_failures,
+        breakdowns,
     } = today;
     state.history.push(DaySummary {
         day: state.day(),
@@ -32,6 +34,8 @@ fn close_day(state: &mut GameState) {
         shipped,
         scrapped,
         iqc_rejects,
+        field_failures,
+        breakdowns,
     });
 
     let limit = state.tuning.overdraft_limit;

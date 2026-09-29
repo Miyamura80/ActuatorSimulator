@@ -92,6 +92,49 @@ pub enum EventKind {
         station: StationKind,
         proceeds: i64,
     },
+    PriceSpike {
+        supplier: SupplierId,
+        percent: u32,
+        days: u32,
+    },
+    PriceNormal {
+        supplier: SupplierId,
+    },
+    SupplierBankrupt {
+        supplier: SupplierId,
+        lost_value: i64,
+    },
+    MaintenanceStarted {
+        station: StationKind,
+        cost: i64,
+    },
+    Breakdown {
+        station: StationKind,
+        hours: u32,
+        cost: i64,
+    },
+    SpcAlarm {
+        station: StationKind,
+    },
+    FieldFailure {
+        contract: ContractId,
+        lot: LotId,
+        units: u32,
+        doa: bool,
+        cost: i64,
+    },
+    Recall {
+        lot: LotId,
+        recalled: u32,
+        scrapped: u32,
+        /// Pending field failures the recall prevented.
+        averted: u32,
+        cost: i64,
+    },
+    LotScrapped {
+        lot: LotId,
+        qty: u32,
+    },
     LowCash {
         cash: i64,
     },

@@ -64,6 +64,8 @@ pub struct RunSummary {
     pub shipped: u32,
     pub scrapped: u32,
     pub iqc_rejects: u32,
+    pub field_failures: u32,
+    pub breakdowns: u32,
     /// Shipped units that carried a detectable defect (escapes).
     pub escaped_defects: u32,
     /// Shipped units that carried a latent defect.
@@ -88,6 +90,9 @@ pub struct Aggregate {
     pub scrap_rate: f64,
     /// Escaped defects per million shipped units.
     pub escape_ppm: f64,
+    /// Field failures (RMAs) per million shipped units.
+    pub field_failure_ppm: f64,
+    pub mean_breakdowns: f64,
 }
 
 #[derive(Debug, Serialize, JsonSchema)]
@@ -128,6 +133,8 @@ fn summarize(seed: u64, s: &GameState, history: bool) -> RunSummary {
         shipped: sum(|d| d.shipped),
         scrapped: sum(|d| d.scrapped),
         iqc_rejects: sum(|d| d.iqc_rejects),
+        field_failures: sum(|d| d.field_failures),
+        breakdowns: sum(|d| d.breakdowns),
         escaped_defects,
         escaped_latent,
         contracts_completed: count(ContractStatus::Completed),
@@ -153,6 +160,9 @@ fn aggregate(runs: &[RunSummary]) -> Aggregate {
         mean_shipped: mean(|r| f64::from(r.shipped)),
         scrap_rate: scrapped as f64 / (produced + scrapped).max(1) as f64,
         escape_ppm: escaped as f64 * 1e6 / shipped.max(1) as f64,
+        field_failure_ppm: runs.iter().map(|r| r.field_failures as f64).sum::<f64>() * 1e6
+            / shipped.max(1) as f64,
+        mean_breakdowns: mean(|r| f64::from(r.breakdowns)),
     }
 }
 

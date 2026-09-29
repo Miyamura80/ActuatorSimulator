@@ -11,7 +11,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, VecDeque};
 
 /// Bump when the save format changes incompatibly.
-pub const SAVE_VERSION: u32 = 1;
+pub const SAVE_VERSION: u32 = 2;
+/// Default preventive-maintenance interval, in operating hours.
+pub const DEFAULT_PM_INTERVAL: u32 = 120;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
@@ -35,6 +37,8 @@ pub struct GameState {
     pub stations: Vec<Station>,
     pub contracts: Vec<Contract>,
     pub shipments: Vec<Shipment>,
+    /// Shipped units that will come back as RMAs.
+    pub pending_failures: Vec<PendingFailure>,
     pub policies: Policies,
     pub ledger: Ledger,
     /// Ledger at the start of the current day, for daily deltas.
@@ -53,6 +57,8 @@ pub struct DayCounters {
     pub shipped: u32,
     pub scrapped: u32,
     pub iqc_rejects: u32,
+    pub field_failures: u32,
+    pub breakdowns: u32,
 }
 
 /// Units drawn from stock, with the hidden quality they carried.
@@ -72,12 +78,7 @@ impl GameState {
         let stations = StationKind::ALL
             .iter()
             .map(|&kind| {
-                let machine = Machine {
-                    id: MachineId(next_machine_id),
-                    condition: 100.0,
-                    down_until: None,
-                    operating_hours: 0,
-                };
+                let machine = Machine::new(MachineId(next_machine_id));
                 next_machine_id += 1;
                 Station {
                     kind,
@@ -89,6 +90,10 @@ impl GameState {
                     units_scrapped: 0,
                     busy: false,
                     starved_on: None,
+                    drift: 0.0,
+                    spc: VecDeque::new(),
+                    spc_alarm: false,
+                    pm_interval: DEFAULT_PM_INTERVAL,
                 }
             })
             .collect();
@@ -110,6 +115,7 @@ impl GameState {
             stations,
             contracts: Vec::new(),
             shipments: Vec::new(),
+            pending_failures: Vec::new(),
             policies,
             ledger: Ledger::default(),
             ledger_day_start: Ledger::default(),
@@ -198,6 +204,8 @@ impl GameState {
             origin,
             created: self.tick,
             status,
+            recalled: false,
+            failed_in_field: 0,
         });
         if status == LotStatus::Available && qty > 0 {
             self.stock.entry(item).or_default().push_back(id);
@@ -333,6 +341,9 @@ fn make_suppliers(rng: &mut Rng, tuning: &Tuning) -> Vec<Supplier> {
                 active: true,
                 lots_received: 0,
                 lots_rejected: 0,
+                price_mult: 1.0,
+                price_spike_until: None,
+                bad_lots_pending: 0,
             }
         })
         .collect()

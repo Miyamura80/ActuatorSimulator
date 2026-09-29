@@ -25,6 +25,12 @@ pub struct Tuning {
     pub contract_price_mult: f64,
     /// Multiplies contract lead times.
     pub contract_lead_mult: f64,
+    /// Multiplies supplier event odds (bad lots, price spikes, bankruptcies).
+    pub event_mult: f64,
+    /// Multiplies machine breakdown and tool-break odds.
+    pub breakdown_mult: f64,
+    /// Multiplies RMA and recall costs.
+    pub rma_cost_mult: f64,
 }
 
 impl Difficulty {
@@ -38,6 +44,9 @@ impl Difficulty {
                 wear_mult: 0.7,
                 contract_price_mult: 1.15,
                 contract_lead_mult: 1.3,
+                event_mult: 0.5,
+                breakdown_mult: 0.6,
+                rma_cost_mult: 0.7,
             },
             Difficulty::Normal => Tuning {
                 start_cash: 250_000,
@@ -47,6 +56,9 @@ impl Difficulty {
                 wear_mult: 1.0,
                 contract_price_mult: 1.0,
                 contract_lead_mult: 1.0,
+                event_mult: 1.0,
+                breakdown_mult: 1.0,
+                rma_cost_mult: 1.0,
             },
             Difficulty::Hard => Tuning {
                 start_cash: 150_000,
@@ -56,6 +68,9 @@ impl Difficulty {
                 wear_mult: 1.3,
                 contract_price_mult: 0.9,
                 contract_lead_mult: 0.8,
+                event_mult: 1.5,
+                breakdown_mult: 1.4,
+                rma_cost_mult: 1.3,
             },
         }
     }

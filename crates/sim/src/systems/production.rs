@@ -6,6 +6,7 @@ use crate::event::{EventKind, Severity};
 use crate::model::*;
 use crate::policy::InspectionPlan;
 use crate::state::{station_index, GameState};
+use crate::systems::maintenance::drift_factor;
 
 /// Open lots are released after this many ticks even if not full.
 const MAX_LOT_AGE: u32 = 2;
@@ -37,21 +38,15 @@ pub fn tick(state: &mut GameState) {
 }
 
 fn run_station(state: &mut GameState, idx: usize) {
-    let now = state.tick;
     let kind = state.stations[idx].kind;
     let spec = kind.spec();
     let wear_mult = state.tuning.wear_mult;
 
     let mut capacity = 0.0;
     let mut up = 0;
-    for m in &mut state.stations[idx].machines {
-        if m.down_until.is_some_and(|t| t <= now) {
-            m.down_until = None;
-        }
-        if m.down_until.is_none() {
-            up += 1;
-            capacity += spec.rate_per_hour * speed_factor(m.condition);
-        }
+    for m in state.stations[idx].machines.iter().filter(|m| m.is_up()) {
+        up += 1;
+        capacity += spec.rate_per_hour * speed_factor(m.condition);
     }
     let labor = up as i64 * LABOR_PER_MACHINE_HOUR;
     if labor > 0 {
@@ -66,7 +61,7 @@ fn run_station(state: &mut GameState, idx: usize) {
         let ms = &state.stations[idx].machines;
         let live: Vec<f64> = ms
             .iter()
-            .filter(|m| m.down_until.is_none())
+            .filter(|m| m.is_up())
             .map(|m| m.condition)
             .collect();
         live.iter().sum::<f64>() / live.len() as f64
@@ -105,9 +100,10 @@ fn run_station(state: &mut GameState, idx: usize) {
     st.busy = built > 0;
     if built > 0 {
         let wear = spec.wear_per_hour * wear_mult;
-        for m in st.machines.iter_mut().filter(|m| m.down_until.is_none()) {
+        for m in st.machines.iter_mut().filter(|m| m.is_up()) {
             m.condition = (m.condition - wear).max(0.0);
             m.operating_hours += 1;
+            m.hours_since_pm += 1;
         }
     }
     let was_starved = st.starved_on;
@@ -141,7 +137,7 @@ fn build_one(state: &mut GameState, idx: usize, condition: f64) {
         latent |= drawn.latent > 0;
         input_lots.extend(drawn.parts.iter().map(|p| p.lot));
     }
-    let factor = defect_factor(condition);
+    let factor = defect_factor(condition) * drift_factor(state.stations[idx].drift);
     if !defective && state.rng.chance(spec.process_defect * factor) {
         defective = true;
     }
@@ -169,7 +165,10 @@ fn test_one(state: &mut GameState, idx: usize) -> f64 {
         InspectionPlan::Skip => false,
         plan @ InspectionPlan::Sample { .. } => state.rng.chance(plan.fraction()),
     };
-    if tested && defective && state.rng.chance(EOL_TEST_COVERAGE) {
+    // A drifting test bench (miscalibration) misses more defects.
+    let drift = state.stations[idx].drift;
+    let coverage = EOL_TEST_COVERAGE / (1.0 + drift * drift / 2.0);
+    if tested && defective && state.rng.chance(coverage) {
         state.stations[idx].units_scrapped += 1;
         state.today.scrapped += 1;
         return 1.0;

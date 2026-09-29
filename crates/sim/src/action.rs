@@ -2,7 +2,7 @@
 //! [`crate::GameState::apply`], so a seed plus an action log replays a game.
 
 use crate::catalog::{Item, StationKind};
-use crate::model::{ContractId, SupplierId};
+use crate::model::{ContractId, LotId, SupplierId};
 use crate::policy::InspectionPlan;
 use serde::{Deserialize, Serialize};
 
@@ -54,6 +54,22 @@ pub enum Action {
     },
     ShipNow {
         contract: ContractId,
+    },
+    /// Preventive maintenance on the station's most worn machine.
+    Maintain {
+        station: StationKind,
+    },
+    /// Auto-maintenance interval in operating hours (0 disables it).
+    SetPmInterval {
+        station: StationKind,
+        hours: u32,
+    },
+    /// Recall shipped units from this lot and everything built from it.
+    Recall {
+        lot: LotId,
+    },
+    ScrapLot {
+        lot: LotId,
     },
 }
 
