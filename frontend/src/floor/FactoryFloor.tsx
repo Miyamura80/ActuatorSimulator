@@ -21,12 +21,12 @@ import { beaconState } from "./status";
 const VIEW_WIDTH = 35;
 const VIEW_HEIGHT = 19;
 
-/** Fit the whole plant on screen whenever the canvas is resized. */
 /** Zoom that fits the whole plant in a canvas of this size. */
 function fitZoom(width: number, height: number) {
 	return Math.min(width / VIEW_WIDTH, height / VIEW_HEIGHT);
 }
 
+/** Fit the whole plant on screen whenever the canvas is resized. */
 function FitCamera() {
 	const { camera, size } = useThree();
 	useEffect(() => {

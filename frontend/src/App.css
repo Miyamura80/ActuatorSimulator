@@ -521,6 +521,28 @@ h2 {
 .floor-label.selected {
 	outline: 1px solid var(--hazard);
 }
+.station-strip {
+	position: absolute;
+	z-index: 2;
+	left: 8px;
+	right: 8px;
+	bottom: 8px;
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+.strip-btn {
+	font-size: 13px;
+	padding: 4px 10px;
+	background: rgb(27 31 35 / 0.9);
+	border-left: 3px solid var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.strip-btn.on {
+	outline: 1px solid var(--hazard);
+}
+/* Stack-light colours; after the rules above so they win the border colour. */
 .beacon-running {
 	border-left-color: var(--ok);
 }
@@ -545,27 +567,6 @@ h2 {
 	border-top: 3px solid var(--hazard);
 	border-radius: 6px;
 	padding: 10px 12px;
-}
-.station-strip {
-	position: absolute;
-	z-index: 2;
-	left: 8px;
-	right: 8px;
-	bottom: 8px;
-	display: flex;
-	gap: 6px;
-	flex-wrap: wrap;
-}
-.strip-btn {
-	font-size: 13px;
-	padding: 4px 10px;
-	background: rgb(27 31 35 / 0.9);
-	border-left: 3px solid var(--muted);
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-}
-.strip-btn.on {
-	outline: 1px solid var(--hazard);
 }
 .station-card header {
 	display: flex;
