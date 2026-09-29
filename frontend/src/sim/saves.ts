@@ -19,15 +19,23 @@ interface SaveData {
 
 export const AUTO_SLOT = "auto";
 const DB_NAME = "actuator-works";
+/** Bump whenever the stores below change shape. */
+const DB_VERSION = 2;
 const HEADERS = "headers";
 const DATA = "data";
 
 function open(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, 1);
+		const req = indexedDB.open(DB_NAME, DB_VERSION);
 		req.onupgradeneeded = () => {
-			req.result.createObjectStore(HEADERS, { keyPath: "slot" });
-			req.result.createObjectStore(DATA, { keyPath: "slot" });
+			const db = req.result;
+			// v1 kept header and payload in one "saves" store (dev builds only).
+			if (db.objectStoreNames.contains("saves")) db.deleteObjectStore("saves");
+			for (const name of [HEADERS, DATA]) {
+				if (!db.objectStoreNames.contains(name)) {
+					db.createObjectStore(name, { keyPath: "slot" });
+				}
+			}
 		};
 		req.onsuccess = () => resolve(req.result);
 		req.onerror = () => reject(req.error);

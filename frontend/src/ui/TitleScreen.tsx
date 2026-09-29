@@ -143,8 +143,16 @@ export function TitleScreen({ onNew, onLoad, error }: Props) {
 						</ul>
 					</section>
 				)}
-				{storageError && <p className="error">{storageError}</p>}
-				{error && <p className="error">{error}</p>}
+				{storageError && (
+					<p className="error" role="alert">
+						{storageError}
+					</p>
+				)}
+				{error && (
+					<p className="error" role="alert">
+						{error}
+					</p>
+				)}
 			</div>
 		</div>
 	);

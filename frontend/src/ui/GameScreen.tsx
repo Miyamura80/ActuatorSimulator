@@ -13,6 +13,8 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 	const { view } = game;
 	const bankrupt = view.status.state === "bankrupt";
 	const exitRef = useRef<HTMLButtonElement>(null);
+	const noticeTimer = useRef<number | undefined>(undefined);
+	useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
 
 	// The game-over dialog is modal: move focus onto its only action.
 	useEffect(() => {
@@ -27,7 +29,9 @@ export function GameScreen({ sim, onExit }: { sim: Sim; onExit: () => void }) {
 		} catch (e) {
 			setNotice(`Save failed: ${String(e)}`);
 		}
-		window.setTimeout(() => setNotice(null), 2500);
+		// One timer at a time, so a second save's notice isn't cut short.
+		window.clearTimeout(noticeTimer.current);
+		noticeTimer.current = window.setTimeout(() => setNotice(null), 2500);
 	};
 
 	const shown =
