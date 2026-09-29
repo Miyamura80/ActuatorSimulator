@@ -81,13 +81,12 @@ export function TitleScreen({
 				</p>
 
 				<div className="quick">
-					<button
-						type="button"
-						className={offerTutorial ? "primary" : ""}
-						onClick={onTutorial}
-					>
-						Tutorial
-					</button>
+					{/* Hidden once done; Settings can offer it again. */}
+					{offerTutorial && (
+						<button type="button" className="primary" onClick={onTutorial}>
+							Tutorial
+						</button>
+					)}
 					<button type="button" onClick={onDaily}>
 						Daily challenge
 						<span className="muted small">

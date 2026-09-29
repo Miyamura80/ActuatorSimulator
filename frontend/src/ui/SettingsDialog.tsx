@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { configureAudio, sfx } from "../audio/sfx";
 import { type Settings, saveSettings } from "../settings";
 
@@ -14,10 +15,30 @@ export function SettingsDialog({ settings, onChange, onClose }: Props) {
 		configureAudio(next);
 		onChange(next);
 	};
+	// Modal: focus the dialog's main action, close on Esc, and hand focus back
+	// to whatever opened it.
+	const doneRef = useRef<HTMLButtonElement>(null);
+	useEffect(() => {
+		const opener = document.activeElement as HTMLElement | null;
+		doneRef.current?.focus();
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", onKey);
+		return () => {
+			window.removeEventListener("keydown", onKey);
+			opener?.focus();
+		};
+	}, [onClose]);
 	return (
 		<div className="overlay">
-			<div className="dialog settings" role="dialog" aria-label="Settings">
-				<h2>Settings</h2>
+			<div
+				className="dialog settings"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="settings-title"
+			>
+				<h2 id="settings-title">Settings</h2>
 				<label className="row">
 					<span>Volume</span>
 					<input
@@ -55,9 +76,15 @@ export function SettingsDialog({ settings, onChange, onClose }: Props) {
 					Offer the tutorial on the title screen
 				</label>
 				<p className="muted small">
-					Shortcuts: Space pause/resume · 1 / 2 / 3 speed · Esc close panels
+					Shortcuts: Space pause/resume · 1 / 2 / 3 speed · Esc close panels and
+					dialogs
 				</p>
-				<button type="button" className="primary" onClick={onClose}>
+				<button
+					ref={doneRef}
+					type="button"
+					className="primary"
+					onClick={onClose}
+				>
 					Done
 				</button>
 			</div>

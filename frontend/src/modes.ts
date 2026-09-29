@@ -22,10 +22,13 @@ export function dailySeed(date: string): number {
 	return h;
 }
 
-/** Cash plus reputation, where each reputation point is worth $2,000. */
+/**
+ * Cash plus reputation, where each reputation point is worth $2,000. Zero if
+ * the plant went bankrupt; a solvent run in overdraft can score below zero.
+ */
 export function dailyScore(v: View): number {
 	if (v.status.state === "bankrupt") return 0;
-	return Math.max(0, Math.round(v.cash + v.reputation * 2000));
+	return Math.round(v.cash + v.reputation * 2000);
 }
 
 export function modeLabel(m: Mode): string {

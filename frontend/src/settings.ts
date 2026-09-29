@@ -18,14 +18,18 @@ const DEFAULTS: Settings = {
 const SETTINGS_KEY = "aw.settings";
 const DAILY_KEY = "aw.daily";
 
-function read<T>(key: string, fallback: T): T {
+/** Parsed JSON for `key`, or null if missing, unreadable or malformed. */
+function readJson(key: string): unknown {
 	try {
 		const raw = localStorage.getItem(key);
-		return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+		return raw ? JSON.parse(raw) : null;
 	} catch {
-		return fallback;
+		return null;
 	}
 }
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+	typeof v === "object" && v !== null && !Array.isArray(v);
 
 function write(key: string, value: unknown) {
 	try {
@@ -35,8 +39,21 @@ function write(key: string, value: unknown) {
 	}
 }
 
+/** Stored settings, field by field; anything missing or mistyped falls back. */
 export function loadSettings(): Settings {
-	return read(SETTINGS_KEY, DEFAULTS);
+	const s = readJson(SETTINGS_KEY);
+	if (!isObject(s)) return DEFAULTS;
+	const bool = (v: unknown, d: boolean) => (typeof v === "boolean" ? v : d);
+	const volume =
+		typeof s.volume === "number" && Number.isFinite(s.volume)
+			? Math.min(1, Math.max(0, s.volume))
+			: DEFAULTS.volume;
+	return {
+		volume,
+		muted: bool(s.muted, DEFAULTS.muted),
+		ambience: bool(s.ambience, DEFAULTS.ambience),
+		tutorialDone: bool(s.tutorialDone, DEFAULTS.tutorialDone),
+	};
 }
 
 export function saveSettings(s: Settings) {
@@ -52,8 +69,18 @@ interface DailyResult {
 }
 
 export function loadDailyResults(): DailyResult[] {
-	const rec = read<{ results: DailyResult[] }>(DAILY_KEY, { results: [] });
-	return rec.results;
+	const rec = readJson(DAILY_KEY);
+	if (!isObject(rec) || !Array.isArray(rec.results)) return [];
+	const num = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+	return rec.results.filter(
+		(r): r is DailyResult =>
+			isObject(r) &&
+			typeof r.date === "string" &&
+			num(r.score) &&
+			num(r.cash) &&
+			num(r.reputation) &&
+			typeof r.bankrupt === "boolean",
+	);
 }
 
 export function recordDailyResult(r: DailyResult) {

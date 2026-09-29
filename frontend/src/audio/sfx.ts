@@ -9,6 +9,8 @@ let hum: { gain: GainNode; stop: () => void } | null = null;
 let volume = 0.6;
 let muted = false;
 let ambience = true;
+/** Last level the game asked for, so re-enabling ambience can restore it. */
+let humLevel = 0;
 
 function audio(): AudioContext | null {
 	if (typeof window === "undefined" || !("AudioContext" in window)) return null;
@@ -31,7 +33,9 @@ export function configureAudio(s: Settings) {
 	muted = s.muted;
 	ambience = s.ambience;
 	applyVolume();
-	if (!ambience) setHum(0);
+	// Off tears the hum down; on brings it back at the last requested level.
+	if (!ambience) stopHum();
+	else setHum(humLevel);
 }
 
 /** A short enveloped oscillator note. */
@@ -100,6 +104,7 @@ export const sfx = {
 
 /** Factory ambience: low filtered noise whose level follows line activity (0..1). */
 export function setHum(level: number) {
+	humLevel = level;
 	const a = audio();
 	if (!a || !master) return;
 	if (!hum) {

@@ -196,9 +196,9 @@ frequency, machine wear, and contract strictness: Easy / Normal / Hard.
   difficulty, 30 game days. Score = cash + $2,000 per reputation point (0 if
   bankrupt). Best score per date is kept in localStorage. Daily runs never
   autosave, so they cannot be resumed or overwrite the sandbox autosave.
-- **Tutorial**: eight steps on a fixed Easy plant; each waits for the player to
-  do the thing it describes (select a station, accept a contract, open a tab,
-  start time, first shipment).
+- **Tutorial**: eight steps on a fixed Easy plant. Six wait for the player to
+  do the thing they describe (select a station, accept a contract, open a tab,
+  start time, first shipment); the welcome and closing steps click through.
 - **Sound** is all Web Audio synthesis (chimes, alarms, clunks, a noise-based
   factory hum scaled by line activity). No audio assets. One sound per frame:
   the most severe event wins.

@@ -258,8 +258,9 @@ h2 {
 	display: flex;
 	flex-direction: column;
 }
-/* Wrapper only so a modal can make the page behind it inert. */
-.game-main {
+/* Wrappers only so a modal can make the page behind it inert. */
+.game-main,
+.screen {
 	display: contents;
 }
 .hud {
@@ -1051,7 +1052,8 @@ select {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-	min-width: 320px;
+	min-width: 0;
+	width: min(100%, 420px);
 }
 .dialog.settings h2 {
 	color: var(--text);

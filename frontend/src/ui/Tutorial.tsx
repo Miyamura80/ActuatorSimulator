@@ -1,6 +1,6 @@
 // Guided first run: each step waits for the player to do the thing it
 // describes, then moves on.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { View } from "../sim/types";
 import type { Speed } from "../sim/useGame";
 import type { Tab } from "./Sidebar";
@@ -74,8 +74,18 @@ export function Tutorial({ onFinish, ...ui }: Props) {
 		if (complete && !last) setI((n) => n + 1);
 	}, [complete, last]);
 
+	// Start keyboard users in the tutorial instead of at the top of the page.
+	const box = useRef<HTMLDivElement>(null);
+	useEffect(() => box.current?.focus(), []);
+
 	return (
-		<div className="tutorial" role="dialog" aria-label="Tutorial">
+		<div
+			ref={box}
+			className="tutorial"
+			role="dialog"
+			aria-label="Tutorial"
+			tabIndex={-1}
+		>
 			<div className="hazard" />
 			<div className="tut-body">
 				<span className="muted small">
@@ -93,7 +103,11 @@ export function Tutorial({ onFinish, ...ui }: Props) {
 							{last ? "Finish" : "Next"}
 						</button>
 					)}
-					{step.done && <span className="muted small">Waiting for you…</span>}
+					{step.done && (
+						<span className="muted small" role="status" aria-live="polite">
+							Waiting for you…
+						</span>
+					)}
 					{!last && (
 						<button type="button" className="ghost" onClick={onFinish}>
 							Skip tutorial

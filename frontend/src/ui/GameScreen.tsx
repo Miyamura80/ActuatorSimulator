@@ -48,6 +48,8 @@ interface Props {
 	mode: Mode;
 	onExit: () => void;
 	onSettings: () => void;
+	/** The settings dialog is open over the game. */
+	settingsOpen: boolean;
 	onTutorialDone: () => void;
 }
 
@@ -56,6 +58,7 @@ export function GameScreen({
 	mode,
 	onExit,
 	onSettings,
+	settingsOpen,
 	onTutorialDone,
 }: Props) {
 	const game = useGame(sim, mode.kind !== "daily");
@@ -134,7 +137,7 @@ export function GameScreen({
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			const t = e.target as HTMLElement;
-			if (modal) return;
+			if (modal || settingsOpen) return;
 			if (e.key === "Escape") {
 				closeCard();
 				return;
@@ -157,7 +160,22 @@ export function GameScreen({
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [speed, setSpeed, closeCard, modal]);
+	}, [speed, setSpeed, closeCard, modal, settingsOpen]);
+
+	// Opening settings pauses the plant; closing it resumes at the old speed.
+	// Only the open/close transition drives this, so read speed via a ref.
+	const speedNow = useRef(speed);
+	speedNow.current = speed;
+	const beforeSettings = useRef<Speed>(0);
+	useEffect(() => {
+		if (settingsOpen) {
+			beforeSettings.current = speedNow.current;
+			setSpeed(0);
+		} else if (beforeSettings.current !== 0) {
+			setSpeed(beforeSettings.current);
+			beforeSettings.current = 0;
+		}
+	}, [settingsOpen, setSpeed]);
 
 	const save = async () => {
 		const name = `Day ${view.day + 1} · ${view.difficulty}`;

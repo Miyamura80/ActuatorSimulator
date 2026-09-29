@@ -93,6 +93,7 @@ function App() {
 				mode={screen.mode}
 				onExit={() => setScreen({ kind: "title" })}
 				onSettings={() => setShowSettings(true)}
+				settingsOpen={showSettings}
 				onTutorialDone={() => {
 					const next = { ...settings, tutorialDone: true };
 					setSettings(next);
@@ -103,7 +104,10 @@ function App() {
 	}
 	return (
 		<>
-			{body}
+			{/* Settings is modal: whatever screen is behind it goes inert. */}
+			<div className="screen" inert={showSettings}>
+				{body}
+			</div>
 			{showSettings && (
 				<SettingsDialog
 					settings={settings}
