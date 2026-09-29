@@ -186,6 +186,23 @@ frequency, machine wear, and contract strictness: Easy / Normal / Hard.
 - **Game speed**: 1x is 2 game hours per real second (a 90-day game is about
   18 minutes); 2x and 4x multiply it.
 
+- **M5 UI**: the 3D floor stays the main view; everything else lives in a
+  tabbed sidebar (Contracts, Supply, Quality, Stats, Log). Critical events pop
+  as incident cards with a shortcut (trace the lot, inspect the station), and
+  repeats of the same message collapse with a count. Lot tracing goes through
+  `sim::trace::report`, which exposes genealogy and shipped units but never
+  hidden defect counts.
+- **Daily challenge**: the seed is an FNV-1a hash of the UTC date, Normal
+  difficulty, 30 game days. Score = cash + $2,000 per reputation point (0 if
+  bankrupt). Best score per date is kept in localStorage. Daily runs never
+  autosave, so they cannot be resumed or overwrite the sandbox autosave.
+- **Tutorial**: eight steps on a fixed Easy plant; each waits for the player to
+  do the thing it describes (select a station, accept a contract, open a tab,
+  start time, first shipment).
+- **Sound** is all Web Audio synthesis (chimes, alarms, clunks, a noise-based
+  factory hum scaled by line activity). No audio assets. One sound per frame:
+  the most severe event wins.
+
 ## Balance Notes (open for M7)
 
 M1 baseline, autopilot, 20 seeds x 90 days:

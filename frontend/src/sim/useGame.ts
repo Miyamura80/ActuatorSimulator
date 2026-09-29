@@ -26,7 +26,8 @@ export interface Game {
 	trace: (lot: number) => TraceReport | null;
 }
 
-export function useGame(sim: Sim): Game {
+/** `autosave`: write the auto slot once per game day (off for daily runs). */
+export function useGame(sim: Sim, autosave = true): Game {
 	const [view, setView] = useState<View>(() => sim.view(0));
 	const [events, setEvents] = useState<GameEvent[]>(() => view.events);
 	const [speed, setSpeed] = useState<Speed>(0);
@@ -75,7 +76,7 @@ export function useGame(sim: Sim): Game {
 			const over = v.status.state !== "running";
 			if (over) setSpeed(0);
 			// Save each new day, and the final state when the run ends.
-			if (over || v.day !== lastDay.current) {
+			if (autosave && (over || v.day !== lastDay.current)) {
 				lastDay.current = v.day;
 				save(AUTO_SLOT, "Autosave")
 					.then(() => setAutosaveError(null))
@@ -83,7 +84,7 @@ export function useGame(sim: Sim): Game {
 			}
 		}, FRAME_MS);
 		return () => window.clearInterval(id);
-	}, [speed, sim, refresh, save]);
+	}, [speed, sim, refresh, save, autosave]);
 
 	const act = useCallback(
 		(a: Action) => {
