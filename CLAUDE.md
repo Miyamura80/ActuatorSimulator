@@ -21,7 +21,8 @@ actsim call ping --json # Invoke a command headlessly
 actsim call sim_run --args '{"seeds":20,"days":90}' --json  # Autopilot balance sweep
 make new name=fetch_url # Scaffold a new engine command
 make init PROFILE=... DRY_RUN=1  # Onboard the template into a real project
-make dev                # Optional frontend: Vite dev server, /api → actsim serve
+make dev                # The game: builds sim.wasm, then Vite dev server on :1420
+make web                # Static game build (frontend/dist) for deployment
 ```
 
 ## Architecture
@@ -35,7 +36,12 @@ make dev                # Optional frontend: Vite dev server, /api → actsim se
   (both default), so `actsim init` can prune a surface and still compile.
 - **crates/config/** - crate `app-config`; `AppConfig` (secrets) vs sanitized
   `FrontendConfig` (served over HTTP). The sanitizer is a security boundary.
-- **frontend/** - optional React/Vite app, `fetch`-based `/api/v1` client.
+- **crates/sim-wasm/** - C-ABI WebAssembly bridge (JSON in/out) around `sim`;
+  `make wasm` writes `frontend/public/sim.wasm`.
+- **frontend/** - the game: React/Vite, runs the sim in the browser via
+  `frontend/src/sim/` (loader, TS mirrors of the Rust types, IndexedDB saves,
+  `useGame` loop). Keep `frontend/src/sim/types.ts` in sync with
+  `crates/sim/src/view.rs` and `action.rs`.
 
 > **Making backend changes?** Use the `update-backend` skill for architecture details, command patterns, trait implementations, config access, and `actsim` testing workflows.
 

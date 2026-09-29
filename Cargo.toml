@@ -1,3 +1,12 @@
 [workspace]
-members = ["crates/sim", "crates/engine", "crates/config", "crates/cli", "crates/assetgen"]
+members = ["crates/sim", "crates/sim-wasm", "crates/engine", "crates/config", "crates/cli", "crates/assetgen"]
 resolver = "2"
+
+# Size-optimized build for the browser module (`make wasm`).
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

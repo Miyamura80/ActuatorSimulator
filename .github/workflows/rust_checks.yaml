@@ -60,3 +60,25 @@ jobs:
         run: cargo clippy -p actsim --no-default-features --features http-api --all-targets -- -D warnings
       - name: Test (http-api-only)
         run: cargo test -p actsim --no-default-features --features http-api
+
+  wasm:
+    name: WASM build + web bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - uses: oven-sh/setup-bun@v2
+      - name: Install JS deps
+        run: bun install --frozen-lockfile
+      # `make web` builds sim.wasm into frontend/public, then the Vite bundle.
+      - name: Build game
+        run: make web
+      - name: Check bundle contains the sim module
+        run: test -s frontend/dist/sim.wasm

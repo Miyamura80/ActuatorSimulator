@@ -34,7 +34,7 @@ help: ## Show this help message
 ########################################################
 
 ### App
-.PHONY: run build build-release dev
+.PHONY: run build build-release dev wasm web
 
 run: ## Run the HTTP API server (actsim serve)
 	cargo run -p actsim -- serve
@@ -45,8 +45,16 @@ build: ## Build the whole workspace (debug)
 build-release: ## Build the whole workspace (release)
 	cargo build --workspace --release
 
-dev: ## Run the optional frontend in development mode
+wasm: ## Build the browser sim module into frontend/public/sim.wasm
+	@rustup target list --installed | grep -q wasm32-unknown-unknown || rustup target add wasm32-unknown-unknown
+	cargo build -p sim-wasm --profile wasm --target wasm32-unknown-unknown
+	cp target/wasm32-unknown-unknown/wasm/sim_wasm.wasm frontend/public/sim.wasm
+
+dev: wasm ## Run the game in development mode (Vite + sim.wasm)
 	bun run dev
+
+web: wasm ## Build the static game site into dist/
+	bun run build
 
 
 ########################################################

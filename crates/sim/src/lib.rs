@@ -23,6 +23,8 @@ pub mod rng;
 pub mod state;
 pub mod systems;
 pub mod trace;
+mod validate;
+pub mod view;
 
 pub use action::{Action, ActionError};
 pub use catalog::{Item, StationKind};

@@ -123,9 +123,7 @@ pub fn recall(state: &mut GameState, lot: LotId) -> Result<(), String> {
     if shipped == 0 && scrapped == 0 {
         return Err("nothing from this lot is in the field or in stock".into());
     }
-    let before = state.pending_failures.len();
     state.pending_failures.retain(|f| !targets.contains(&f.lot));
-    let averted = (before - state.pending_failures.len()) as u32;
     for id in &targets {
         if state.lot(*id).item == Item::FinishedGood {
             state.lots[id.0 as usize].recalled = true;
@@ -142,7 +140,7 @@ pub fn recall(state: &mut GameState, lot: LotId) -> Result<(), String> {
             "Recalled lot #{}: {shipped} shipped units recalled (${cost}), {scrapped} units scrapped in plant",
             lot.0
         ),
-        EventKind::Recall { lot, recalled: shipped, scrapped, averted, cost },
+        EventKind::Recall { lot, recalled: shipped, scrapped, cost },
     );
     Ok(())
 }
