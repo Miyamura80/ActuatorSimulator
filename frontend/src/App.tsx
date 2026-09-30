@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import "./ui/visual/visual.css";
 import { configureAudio } from "./audio/sfx";
 import { dailySeed, type Mode, todayUtc } from "./modes";
 import { loadSettings, type Settings, saveSettings } from "./settings";

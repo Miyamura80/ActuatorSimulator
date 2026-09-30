@@ -1,9 +1,13 @@
-// Guided first run: each step waits for the player to do the thing it
-// describes, then moves on.
-import { useEffect, useRef, useState } from "react";
-import type { View } from "../sim/types";
+// Guided first run as coach marks: a pulsing ring on the thing to look at or
+// press, a caption of a few words, and the step moves on when the player
+// does it. The first step is a picture of the whole game loop.
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { Item, View } from "../sim/types";
 import type { Speed } from "../sim/useGame";
 import type { Tab } from "./Sidebar";
+import { Glyph } from "./visual/glyphs";
+import { ItemIcon } from "./visual/icons";
 
 interface UiState {
 	view: View;
@@ -13,52 +17,137 @@ interface UiState {
 }
 
 interface Step {
-	title: string;
-	body: string;
+	/** CSS selector of the element to ring; none centres the caption. */
+	target?: string;
+	caption: ReactNode;
 	/** When the step is complete. Steps without one show a Next button. */
 	done?: (s: UiState) => boolean;
 }
 
+const RAW: Item[] = ["alu_billet", "steel_blank", "copper_wire", "pcb_blank"];
+
+/** Parts in, actuators out, trucks, cash. Everything moves. */
+function GameLoop() {
+	return (
+		<div
+			className="loop"
+			role="img"
+			aria-label="Buy parts, build actuators, ship them, get paid"
+		>
+			<span className="loop-stage">
+				{RAW.map((item, i) => (
+					<span
+						key={item}
+						className="drift"
+						style={{ animationDelay: `${i * 0.25}s` }}
+					>
+						<ItemIcon item={item} size={22} />
+					</span>
+				))}
+			</span>
+			<span className="loop-arrow" />
+			<span className="loop-stage">
+				<Glyph name="wrench" size={26} className="spin" />
+			</span>
+			<span className="loop-arrow" />
+			<span className="loop-stage">
+				<ItemIcon item="actuator" size={30} />
+			</span>
+			<span className="loop-arrow" />
+			<span className="loop-stage drive">
+				<Glyph name="truck" size={30} />
+			</span>
+			<span className="loop-arrow" />
+			<span className="loop-stage">
+				<Glyph name="coin" size={28} className="gold bounce" />
+			</span>
+		</div>
+	);
+}
+
 const STEPS: Step[] = [
 	{
-		title: "Welcome to Actuator Works",
-		body: "You run a small plant that builds robot joint actuators: a motor, an encoder, a harmonic gearbox and a driver board in one housing. Parts come in on the left, finished actuators ship on the right.",
+		caption: (
+			<>
+				<GameLoop />
+				<p>Buy parts. Build actuators. Ship. Get paid.</p>
+			</>
+		),
 	},
 	{
-		title: "Your line",
-		body: "Seven stations turn parts into actuators. Click any machine (or a name in the strip at the bottom) to see its condition, maintenance and SPC chart.",
+		target: ".flow-map",
+		caption: "Your line. Thin pipe = bottleneck. Tap a station.",
 		done: (s) => s.selected !== null,
 	},
 	{
-		title: "Win some work",
-		body: "Customers post contracts on the right. Check the quantity against the deadline, then accept one. Late deliveries cost money and reputation.",
+		target: ".station-card",
+		caption: "Ring = machine health. + adds a machine.",
+	},
+	{
+		target: ".contracts .primary",
+		caption: "Truck left of the deadline = on time. Accept one.",
 		done: (s) => s.view.contracts.some((c) => c.status === "active"),
 	},
 	{
-		title: "Keep parts coming",
-		body: "Open the Supply tab. Each part has a supplier, an inspection plan and a reorder point. Cheap suppliers are tempting; their bad lots are not.",
+		target: "#tab-supply",
+		caption: "Parts on hand",
 		done: (s) => s.tab === "supply",
 	},
 	{
-		title: "Start the clock",
-		body: "Press Space or 1× to run time. 2× and 4× speed things up. The line runs one shift (08:00 to 16:00) until you add more.",
+		target: ".speed",
+		caption: "Start the clock",
 		done: (s) => s.speed > 0,
 	},
 	{
-		title: "First shipment",
-		body: "Finished actuators ship to your active contracts every day at 17:00. Watch cash in the top bar.",
+		target: ".stat.cash",
+		caption: (
+			<>
+				<Glyph name="truck" size={16} /> 17:00{" "}
+				<Glyph name="coin" size={16} className="gold" />
+			</>
+		),
 		done: (s) => s.view.history.some((d) => d.shipped > 0),
 	},
 	{
-		title: "Quality is the game",
-		body: "Open the Quality tab. SPC charts flag drifting machines before they make scrap. Defects that escape come back weeks later as returns; trace the lot and recall it before more fail.",
+		target: "#tab-quality",
+		caption: "Defects",
 		done: (s) => s.tab === "quality",
 	},
 	{
-		title: "You're on your own",
-		body: "Stay above the overdraft limit, keep reputation up to win bigger contracts, and keep an eye on the red cards. Good luck.",
+		target: ".gates",
+		caption: "Catch it early: cheap. At the customer: costly.",
 	},
 ];
+
+/** How often the ring re-reads its target's box. */
+const TRACK_MS = 200;
+
+/** The target's box, re-read a few times a second as the layout moves. */
+function useTargetBox(selector: string | undefined) {
+	const [box, setBox] = useState<DOMRect | null>(null);
+	useEffect(() => {
+		if (!selector) {
+			setBox(null);
+			return;
+		}
+		let prev = "";
+		const read = () => {
+			const r =
+				document.querySelector(selector)?.getBoundingClientRect() ?? null;
+			const key = r
+				? `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`
+				: "";
+			if (key !== prev) {
+				prev = key;
+				setBox(r);
+			}
+		};
+		read();
+		const id = window.setInterval(read, TRACK_MS);
+		return () => window.clearInterval(id);
+	}, [selector]);
+	return box;
+}
 
 interface Props extends UiState {
 	onFinish: () => void;
@@ -69,52 +158,82 @@ export function Tutorial({ onFinish, ...ui }: Props) {
 	const step = STEPS[i];
 	const last = i === STEPS.length - 1;
 	const complete = step.done?.(ui) ?? false;
+	const box = useTargetBox(step.target);
 
 	useEffect(() => {
 		if (complete && !last) setI((n) => n + 1);
 	}, [complete, last]);
 
 	// Start keyboard users in the tutorial instead of at the top of the page.
-	const box = useRef<HTMLDivElement>(null);
-	useEffect(() => box.current?.focus(), []);
+	const panel = useRef<HTMLDivElement>(null);
+	useEffect(() => panel.current?.focus(), []);
 
-	return (
-		<div
-			ref={box}
-			className="tutorial"
-			role="dialog"
-			aria-label="Tutorial"
-			tabIndex={-1}
-		>
-			<div className="hazard" />
-			<div className="tut-body">
-				<span className="muted small">
-					Step {i + 1} of {STEPS.length}
-				</span>
-				<h2>{step.title}</h2>
-				<p>{step.body}</p>
-				<div className="actions">
+	// The caption sits under the target, or above it near the bottom.
+	const pad = 8;
+	const width = Math.min(320, window.innerWidth - 24);
+	const below = box ? box.bottom + 170 < window.innerHeight : true;
+	const style = box
+		? {
+				left: Math.max(12, Math.min(box.left, window.innerWidth - width - 12)),
+				width,
+				top: below ? box.bottom + pad + 6 : undefined,
+				bottom: below ? undefined : window.innerHeight - box.top + pad + 6,
+			}
+		: undefined;
+
+	return createPortal(
+		<>
+			{box && (
+				<div
+					className="coach-ring"
+					aria-hidden="true"
+					style={{
+						left: box.left - pad,
+						top: box.top - pad,
+						width: box.width + pad * 2,
+						height: box.height + pad * 2,
+					}}
+				/>
+			)}
+			<div
+				ref={panel}
+				className={`coach${box ? "" : " centre"}`}
+				role="dialog"
+				aria-label="Tutorial"
+				tabIndex={-1}
+				style={style}
+			>
+				<div className="caption" aria-live="polite">
+					{step.caption}
+				</div>
+				<div className="coach-foot">
+					<span
+						className="steps"
+						role="img"
+						aria-label={`Step ${i + 1} of ${STEPS.length}`}
+					>
+						{STEPS.map((_, k) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: one dot per step
+							<i key={k} className={k < i ? "done" : k === i ? "now" : ""} />
+						))}
+					</span>
 					{!step.done && (
 						<button
 							type="button"
-							className="primary"
+							className="primary small"
 							onClick={() => (last ? onFinish() : setI(i + 1))}
 						>
-							{last ? "Finish" : "Next"}
+							{last ? "Play" : "Next"}
 						</button>
 					)}
-					{step.done && (
-						<span className="muted small" role="status" aria-live="polite">
-							Waiting for you…
-						</span>
-					)}
 					{!last && (
-						<button type="button" className="ghost" onClick={onFinish}>
-							Skip tutorial
+						<button type="button" className="ghost small" onClick={onFinish}>
+							Skip
 						</button>
 					)}
 				</div>
 			</div>
-		</div>
+		</>,
+		document.body,
 	);
 }

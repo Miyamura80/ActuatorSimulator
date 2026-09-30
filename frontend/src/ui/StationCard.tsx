@@ -2,19 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { beaconState } from "../floor/status";
 import type { StationKind } from "../sim/types";
 import type { Game } from "../sim/useGame";
-import { LineChart } from "./charts";
-import { formatMoney } from "./format";
+import { formatMoney, formatMoneyCompact } from "./format";
 import { IntField } from "./IntField";
+import { capacity } from "./visual/capacity";
+import { ServiceBar, WearRing } from "./visual/gauges";
+import { Glyph, type GlyphName } from "./visual/glyphs";
+import { ItemIcon, StationIcon } from "./visual/icons";
+import { SpcChart } from "./visual/SpcChart";
 
-const STATE_LABEL = {
-	running: "Running",
-	starved: "Waiting on parts",
-	alarm: "SPC alarm",
-	degraded: "Machine down",
-	broken: "Broken down",
-	maintenance: "Maintenance",
-	off: "Idle",
-} as const;
+const STATE: Record<string, { label: string; glyph: GlyphName | null }> = {
+	running: { label: "Running", glyph: "check" },
+	starved: { label: "No parts", glyph: "alert" },
+	alarm: { label: "Drifting", glyph: "alert" },
+	degraded: { label: "Part down", glyph: "bolt" },
+	broken: { label: "Broken", glyph: "bolt" },
+	maintenance: { label: "Service", glyph: "wrench" },
+	off: { label: "Idle", glyph: "clock" },
+};
 
 const PM_OPTIONS = [0, 80, 120, 200, 320];
 
@@ -45,17 +49,19 @@ export function StationCard({ game, kind, onClose }: Props) {
 	const worst = Math.min(...st.machines.map((m) => m.condition));
 	const resale = Math.round((st.machine_price * 0.5 * worst) / 100);
 	const run = (err: string | null) => setError(err);
-	const inputs = st.inputs
-		.map(
-			([item, n]) =>
-				`${n}× ${view.stock.find((s) => s.item === item)?.label ?? item}`,
-		)
-		.join(" + ");
+	const have = (item: string) =>
+		view.stock.find((s) => s.item === item)?.qty ?? 0;
+	const label = (item: string) =>
+		view.stock.find((s) => s.item === item)?.label ?? item;
+	const s = STATE[state];
 	return (
 		<div className="station-card">
 			<header>
+				<StationIcon kind={kind} size={24} />
 				<strong>{st.label}</strong>
-				<span className={`pill beacon-${state}`}>{STATE_LABEL[state]}</span>
+				<span className={`pill beacon-${state}`}>
+					{s.glyph && <Glyph name={s.glyph} size={12} />} {s.label}
+				</span>
 				<button
 					ref={closeRef}
 					type="button"
@@ -66,80 +72,103 @@ export function StationCard({ game, kind, onClose }: Props) {
 					×
 				</button>
 			</header>
-			<p className="muted small">
-				{inputs} → {view.stock.find((s) => s.item === st.output)?.label}.{" "}
-				{st.rate_per_hour}/h per machine.
-			</p>
+
+			{/* Recipe: what goes in (with stock on hand) and what comes out. */}
+			<div className="recipe">
+				{st.inputs.map(([item, n], i) => (
+					<span key={item} className="ingredient-wrap">
+						{i > 0 && <span className="op">+</span>}
+						<span
+							className={`ingredient${st.starved_on === item ? " starved" : ""}${have(item) === 0 ? " empty" : ""}`}
+							title={label(item)}
+						>
+							<ItemIcon item={item} size={26} title={label(item)} />
+							{n > 1 && <span className="times">×{n}</span>}
+							<span className="have num">{have(item)}</span>
+						</span>
+					</span>
+				))}
+				<span className="op arrow" aria-hidden="true">
+					<span className={st.busy ? "belt moving" : "belt"} />
+				</span>
+				<span className="ingredient out" title={label(st.output)}>
+					<ItemIcon item={st.output} size={30} title={label(st.output)} />
+					<span className="have num">{have(st.output)}</span>
+				</span>
+				<span className="rate" title="Capacity per hour">
+					<span className="num">
+						{Math.round(capacity(st, view) * 10) / 10}
+					</span>
+					<span className="muted small">/h</span>
+				</span>
+			</div>
+
 			<ul className="machines">
-				{st.machines.map((m, i) => (
+				{st.machines.map((m) => (
 					<li key={m.id}>
-						<span>
-							Machine {i + 1} · {Math.round(m.condition)}%
-						</span>
-						<span className="meter" aria-hidden="true">
-							<span style={{ width: `${m.condition}%` }} />
-						</span>
-						<span className={m.down_reason === "breakdown" ? "bad" : "muted"}>
-							{m.down_reason ?? `${m.hours_since_pm}h since PM`}
-						</span>
+						<WearRing condition={m.condition} down={m.down_reason} />
+						<ServiceBar hours={m.hours_since_pm} interval={st.pm_interval} />
 					</li>
 				))}
+				<li className="add">
+					<button
+						type="button"
+						className="add-machine"
+						onClick={() => run(act({ type: "buy_machine", station: kind }))}
+						title={`Buy a machine for ${formatMoney(st.machine_price)}`}
+						aria-label={`Buy a machine for ${formatMoney(st.machine_price)}`}
+					>
+						<Glyph name="plus" size={14} />
+						<span className="small">
+							{formatMoneyCompact(st.machine_price)}
+						</span>
+					</button>
+				</li>
 			</ul>
-			<div className="spc-mini">
-				<LineChart
-					title={`${st.label} x-bar chart`}
-					values={st.spc}
-					format={(v) => v.toFixed(1)}
-					refs={[view.spc_limit, -view.spc_limit]}
-					domain={[-3.5, 3.5]}
-					height={70}
+
+			<SpcChart
+				title={`${st.label} process drift`}
+				values={st.spc}
+				limit={view.spc_limit}
+			/>
+
+			<div className="knob" title="Scheduled maintenance, in operating hours">
+				<Glyph name="wrench" size={14} />
+				<div className="seg">
+					{PM_OPTIONS.map((h) => (
+						<button
+							type="button"
+							aria-pressed={st.pm_interval === h}
+							key={h}
+							className={st.pm_interval === h ? "on" : ""}
+							onClick={() =>
+								run(act({ type: "set_pm_interval", station: kind, hours: h }))
+							}
+						>
+							{h === 0 ? "Never" : `${h}h`}
+						</button>
+					))}
+				</div>
+			</div>
+			<div className="knob" title="Most finished parts to hold before pausing">
+				<ItemIcon item={st.output} size={16} />
+				<span className="muted small">max</span>
+				<IntField
+					label="Buffer cap"
+					min={1}
+					value={st.wip_cap}
+					onCommit={(cap) =>
+						run(act({ type: "set_wip_cap", station: kind, cap }))
+					}
 				/>
 			</div>
-			<div className="grid2">
-				<label>
-					Maintenance every
-					<select
-						value={st.pm_interval}
-						onChange={(e) =>
-							run(
-								act({
-									type: "set_pm_interval",
-									station: kind,
-									hours: Number(e.target.value),
-								}),
-							)
-						}
-					>
-						{PM_OPTIONS.map((h) => (
-							<option key={h} value={h}>
-								{h === 0 ? "Never (run to failure)" : `${h} operating hours`}
-							</option>
-						))}
-					</select>
-				</label>
-				<label>
-					Buffer cap
-					<IntField
-						min={1}
-						value={st.wip_cap}
-						onCommit={(cap) =>
-							run(act({ type: "set_wip_cap", station: kind, cap }))
-						}
-					/>
-				</label>
-			</div>
+
 			<div className="actions">
 				<button
 					type="button"
 					onClick={() => run(act({ type: "maintain", station: kind }))}
 				>
-					Maintain now
-				</button>
-				<button
-					type="button"
-					onClick={() => run(act({ type: "buy_machine", station: kind }))}
-				>
-					Buy ({formatMoney(st.machine_price)})
+					<Glyph name="wrench" size={14} /> Service now
 				</button>
 				{confirmSell ? (
 					<>
@@ -169,7 +198,7 @@ export function StationCard({ game, kind, onClose }: Props) {
 						disabled={st.machines.length <= 1}
 						onClick={() => setConfirmSell(true)}
 					>
-						Sell worst
+						<Glyph name="minus" size={12} /> Sell worst
 					</button>
 				)}
 			</div>

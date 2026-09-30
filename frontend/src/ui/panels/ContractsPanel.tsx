@@ -1,36 +1,75 @@
 import type { Game } from "../../sim/useGame";
-import { formatMoney, formatTick } from "../format";
+import { formatMoney } from "../format";
+import { forecast, hoursUntilDue } from "../visual/forecast";
+import { DeadlineTrack } from "../visual/gauges";
+import { Glyph } from "../visual/glyphs";
+import { ItemIcon } from "../visual/icons";
 
 export function ContractsPanel({ game }: { game: Game }) {
 	const { view, act } = game;
-	const open = view.contracts.filter(
-		(c) => c.status === "offered" || c.status === "active",
-	);
+	const active = view.contracts.filter((c) => c.status === "active");
+	const offers = view.contracts.filter((c) => c.status === "offered");
+	const plan = forecast(view);
 	return (
 		<div className="panel-body contracts">
-			{open.length === 0 && <p className="muted">No offers right now.</p>}
+			{active.length + offers.length === 0 && (
+				<p className="muted">No offers right now.</p>
+			)}
 			<ul>
-				{open.map((c) => {
+				{[...active, ...offers].map((c) => {
+					const offered = c.status === "offered";
+					const left = hoursUntilDue(view, c);
+					// For an offer: when it would finish if accepted now.
+					const eta = (offered ? forecast(view, c) : plan).get(c.id) ?? 0;
+					const fits = eta <= left;
 					const pct = (c.delivered / c.qty) * 100;
-					const late = c.deadline !== null && view.tick > c.deadline;
 					return (
-						<li key={c.id} className={c.quality === "premium" ? "premium" : ""}>
+						<li
+							key={c.id}
+							className={`contract${offered ? " offer" : ""}${c.quality === "premium" ? " premium" : ""}`}
+						>
 							<div className="who">
+								<Glyph name="user" size={14} className="muted" />
 								<strong>{c.customer}</strong>
 								{c.quality === "premium" && (
-									<span className="tag">Premium</span>
+									<Glyph
+										name="star"
+										size={14}
+										title="Premium"
+										className="gold"
+									/>
 								)}
+								<span className="total">
+									{formatMoney(c.qty * c.unit_price)}
+								</span>
 							</div>
-							<div className="terms">
-								{c.qty} units × {formatMoney(c.unit_price)} ={" "}
-								{formatMoney(c.qty * c.unit_price)}
+							<div className="units">
+								<ItemIcon item="finished_good" size={16} />
+								<span className="meter wide">
+									<span style={{ width: `${pct}%` }} />
+								</span>
+								<span className="num">
+									{c.delivered}/{c.qty}
+								</span>
+								<span className="muted num small">
+									@{formatMoney(c.unit_price)}
+								</span>
 							</div>
-							{c.status === "offered" ? (
+							<div className="when">
+								<DeadlineTrack hoursLeft={left} forecastHours={eta} />
+								<Glyph
+									name={fits ? "check" : "alert"}
+									size={16}
+									className={fits ? "good" : "bad"}
+									title={
+										fits
+											? "On time at current capacity"
+											: "Late at current capacity"
+									}
+								/>
+							</div>
+							{offered && (
 								<div className="row">
-									<span className="muted">
-										{c.lead_days} days to deliver · offer ends{" "}
-										{formatTick(c.offer_expires)}
-									</span>
 									<button
 										type="button"
 										className="primary"
@@ -49,15 +88,13 @@ export function ContractsPanel({ game }: { game: Game }) {
 									>
 										Decline
 									</button>
-								</div>
-							) : (
-								<div className="row">
-									<span className="meter wide">
-										<span style={{ width: `${pct}%` }} />
-									</span>
-									<span className={late ? "bad" : "muted"}>
-										{c.delivered}/{c.qty} · due{" "}
-										{c.deadline !== null ? formatTick(c.deadline) : "n/a"}
+									<span
+										className="expires muted small"
+										title="Offer disappears"
+									>
+										<Glyph name="clock" size={12} />
+										{Math.max(0, Math.ceil((c.offer_expires - view.tick) / 24))}
+										d
 									</span>
 								</div>
 							)}

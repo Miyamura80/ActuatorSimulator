@@ -1,0 +1,1153 @@
+/* Visual language: icons, the flow map, gauges and coach marks. */
+.icon {
+	display: inline-block;
+	vertical-align: middle;
+	flex: none;
+}
+
+/* Flow map (bottom-left of the floor) */
+.flow-map {
+	position: absolute;
+	z-index: 2;
+	left: 8px;
+	bottom: 8px;
+	width: min(720px, calc(100% - 16px));
+	aspect-ratio: 720 / 204;
+	background: rgb(18 20 22 / 0.88);
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	backdrop-filter: blur(3px);
+}
+.flow-map > svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+.pipe path {
+	fill: none;
+	stroke-linecap: round;
+}
+.pipe-wall {
+	stroke: #2b3137;
+}
+.pipe-core {
+	stroke: var(--c);
+	opacity: 0.25;
+	stroke-dasharray: 3 7;
+}
+.pipe.flowing .pipe-core {
+	opacity: 0.95;
+	animation: pipe-flow 0.8s linear infinite;
+}
+.pipe.neck .pipe-wall {
+	stroke: #5a2a2a;
+}
+.pipe.starved .pipe-wall {
+	stroke: var(--warn);
+	animation: blink 1s steps(2) infinite;
+}
+@keyframes pipe-flow {
+	to {
+		stroke-dashoffset: -10;
+	}
+}
+@keyframes blink {
+	50% {
+		opacity: 0.25;
+	}
+}
+.chip rect {
+	fill: #1b1f23;
+	stroke: #3a424a;
+}
+.chip text {
+	fill: var(--text);
+	font: 700 10px var(--mono);
+}
+.chip.empty rect {
+	stroke: var(--bad);
+}
+.chip.empty text {
+	fill: var(--bad);
+}
+.ship-truck {
+	color: var(--ok);
+}
+
+.stock-node,
+.flow-node {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	padding: 0;
+	display: grid;
+	place-items: center;
+}
+.stock-node {
+	width: 3.4%;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	border: 0;
+	/* The ring fills clockwise with stock on hand. */
+	background:
+		radial-gradient(circle, #1b1f23 58%, transparent 60%),
+		conic-gradient(var(--tone) var(--fill), #30363d 0);
+}
+.stock-node.ok {
+	--tone: var(--ok);
+}
+.stock-node.low {
+	--tone: var(--warn);
+}
+.stock-node.empty {
+	--tone: var(--bad);
+	box-shadow: 0 0 0 2px var(--bad);
+	animation: blink 1s steps(2) infinite;
+}
+.stock-node .incoming {
+	position: absolute;
+	right: -9px;
+	top: -6px;
+	color: var(--info);
+	line-height: 0;
+}
+.flow-node {
+	grid-template-columns: auto 1fr;
+	gap: 2px;
+	padding: 0 4px;
+	background: #20252a;
+	border: 1px solid #3a424a;
+	border-bottom: 3px solid var(--state);
+	border-radius: 5px;
+}
+.flow-node.on {
+	outline: 2px solid var(--hazard);
+	outline-offset: 1px;
+}
+.flow-node.state-running {
+	box-shadow: 0 0 10px -2px var(--state);
+}
+.flow-node.state-broken,
+.flow-node.state-starved {
+	animation: node-pulse 1.2s ease-in-out infinite;
+}
+@keyframes node-pulse {
+	50% {
+		box-shadow: 0 0 12px 1px var(--state);
+	}
+}
+.node-meta {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	line-height: 1;
+}
+.node-name {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--muted);
+}
+.dots {
+	display: flex;
+	gap: 2px;
+	margin-top: 2px;
+}
+.dots i {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--ok);
+}
+.dots i.down {
+	background: var(--bad);
+}
+.flow-node.neck::after {
+	content: "";
+	position: absolute;
+	inset: -5px;
+	border: 1px dashed var(--bad);
+	border-radius: 7px;
+	pointer-events: none;
+}
+
+/* Tones for glyphs */
+.icon.gold,
+.gold {
+	color: var(--hazard);
+}
+.icon.good {
+	color: var(--ok);
+}
+.icon.bad,
+svg .bad {
+	color: var(--bad);
+}
+svg .info {
+	color: var(--info);
+}
+
+/* Knob rows: an icon, then the control */
+.knob {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 8px 0;
+	color: var(--muted);
+}
+.knob .seg button {
+	padding: 3px 8px;
+	font-size: 13px;
+}
+.knob input {
+	width: 72px;
+	padding: 3px 6px;
+}
+button.toggle.on {
+	border-color: var(--info);
+	color: var(--info);
+}
+
+/* Stock gauge */
+.stock-gauge {
+	position: relative;
+	display: flex;
+	height: 10px;
+	background: #262c32;
+	border-radius: 5px;
+	overflow: visible;
+}
+.stock-gauge .have {
+	background: var(--ok);
+	border-radius: 5px 0 0 5px;
+}
+.stock-gauge.low .have {
+	background: var(--warn);
+}
+.stock-gauge .coming {
+	background: repeating-linear-gradient(
+		-45deg,
+		var(--info) 0 3px,
+		transparent 3px 6px
+	);
+	opacity: 0.8;
+}
+.stock-gauge .reorder {
+	position: absolute;
+	top: -3px;
+	bottom: -3px;
+	width: 2px;
+	background: var(--text);
+}
+.stock-gauge.empty {
+	box-shadow: inset 0 0 0 1px var(--bad);
+}
+
+/* Supply rows */
+.part-head {
+	display: grid;
+	grid-template-columns: 24px 110px 1fr 40px;
+	align-items: center;
+	gap: 8px;
+}
+.part-name {
+	text-align: left;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.supplier-cards {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 6px;
+	margin: 8px 0;
+}
+.supplier {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	padding: 6px 4px;
+	background: var(--bg);
+}
+.supplier.on {
+	border-color: var(--hazard);
+	box-shadow: inset 0 -3px 0 var(--hazard);
+}
+.supplier .price {
+	font: 700 16px var(--mono);
+}
+.supplier .price.spike {
+	color: var(--bad);
+}
+.supplier .lead {
+	display: flex;
+	gap: 3px;
+	align-items: center;
+	color: var(--muted);
+	font-size: 13px;
+}
+.supplier .name {
+	font-size: 11px;
+	color: var(--muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+.stars {
+	display: inline-flex;
+	color: #3a424a;
+}
+.stars .lit {
+	color: var(--hazard);
+}
+.lot-record {
+	display: inline-flex;
+	gap: 2px;
+	min-height: 6px;
+}
+.lot-record i {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ok);
+}
+.lot-record i.bad {
+	background: var(--bad);
+}
+.knob.reorder label.check {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* Sampling strip */
+.sample-gate {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.sample-gate .units {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+.sample-gate .units i {
+	width: 8px;
+	height: 10px;
+	border-radius: 2px;
+	background: #3a424a;
+}
+.sample-gate .units i.seen {
+	background: var(--info);
+}
+.sample-gate .eye {
+	margin-left: 4px;
+	color: #3a424a;
+}
+.sample-gate .eye.on {
+	color: var(--info);
+}
+
+/* Orders on the road */
+.road {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.road li {
+	display: grid;
+	grid-template-columns: 56px 1fr 36px;
+	align-items: center;
+	gap: 8px;
+}
+.road .what {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.road .lane {
+	position: relative;
+	height: 18px;
+	border-bottom: 2px dashed #3a424a;
+	margin-right: 10px;
+}
+.road .truck {
+	position: absolute;
+	bottom: 1px;
+	transform: translateX(-50%);
+	color: var(--info);
+	display: flex;
+	align-items: flex-start;
+	transition: left 0.4s linear;
+}
+.road .dock {
+	position: absolute;
+	right: -10px;
+	bottom: -2px;
+	width: 10px;
+	height: 16px;
+	background: #3a424a;
+}
+.road li.late .truck {
+	color: var(--bad);
+}
+.road .eta {
+	font: 13px var(--mono);
+	color: var(--muted);
+	text-align: right;
+}
+.road li.late .eta {
+	color: var(--bad);
+}
+
+/* Contracts */
+.contracts li.contract {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 10px 0;
+	border-bottom: 1px solid var(--line);
+}
+.contracts .who {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.contracts .total {
+	margin-left: auto;
+	font: 700 17px var(--mono);
+	color: var(--ok);
+}
+.contracts .units,
+.contracts .when {
+	display: grid;
+	grid-template-columns: 18px 1fr auto auto;
+	align-items: center;
+	gap: 8px;
+}
+.contracts .when {
+	grid-template-columns: 1fr 18px;
+}
+.contracts .row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.contracts .expires {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 3px;
+}
+.contracts li.offer {
+	opacity: 0.92;
+}
+
+/* Deadline track: a tick for the due date, a truck for the forecast. */
+.deadline-track {
+	position: relative;
+	height: 30px;
+	display: block;
+}
+.deadline-track .span {
+	position: absolute;
+	left: 0;
+	top: 12px;
+	height: 4px;
+	border-radius: 2px;
+	background: #3a424a;
+}
+.deadline-track .overrun {
+	position: absolute;
+	top: 12px;
+	height: 4px;
+	background: repeating-linear-gradient(
+		-45deg,
+		var(--bad) 0 4px,
+		transparent 4px 7px
+	);
+}
+.deadline-track .flag {
+	position: absolute;
+	top: 4px;
+	height: 20px;
+	width: 2px;
+	background: var(--text);
+}
+.deadline-track .flag-label {
+	position: absolute;
+	top: 17px;
+	transform: translateX(calc(-100% - 4px));
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	font: 11px var(--mono);
+	color: var(--muted);
+	white-space: nowrap;
+}
+.deadline-track .eta {
+	position: absolute;
+	top: -1px;
+	transform: translateX(-50%);
+	color: var(--ok);
+	transition: left 0.3s;
+}
+.deadline-track.late .eta {
+	color: var(--bad);
+}
+
+/* Station card */
+.station-card header strong {
+	font-size: 17px;
+}
+.station-card .pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+.recipe {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin: 10px 0 4px;
+	padding: 8px;
+	background: var(--bg);
+	border-radius: 6px;
+}
+.ingredient-wrap {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.ingredient {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1px;
+}
+.ingredient .have {
+	font-size: 11px;
+	color: var(--muted);
+}
+.ingredient.empty .have {
+	color: var(--bad);
+	font-weight: 700;
+}
+.ingredient.starved {
+	animation: blink 1s steps(2) infinite;
+}
+.ingredient.starved::after {
+	content: "";
+	position: absolute;
+	inset: -3px;
+	border: 2px solid var(--bad);
+	border-radius: 6px;
+}
+.ingredient .times {
+	position: absolute;
+	top: -6px;
+	right: -10px;
+	font: 700 11px var(--mono);
+	color: var(--hazard);
+}
+.op {
+	color: var(--muted);
+	font-weight: 700;
+}
+.op.arrow {
+	flex: 1;
+	min-width: 28px;
+	display: flex;
+}
+.belt {
+	height: 6px;
+	flex: 1;
+	border-radius: 3px;
+	background: repeating-linear-gradient(90deg, #555e67 0 4px, #2b3137 4px 8px);
+}
+.belt.moving {
+	animation: belt-move 0.5s linear infinite;
+}
+@keyframes stripe-9 {
+	to {
+		background-position: 9px 0;
+	}
+}
+@keyframes belt-move {
+	to {
+		background-position: 8px 0;
+	}
+}
+.recipe .rate {
+	margin-left: 6px;
+	display: flex;
+	align-items: baseline;
+	gap: 1px;
+	font-size: 18px;
+	font-weight: 700;
+}
+.station-card .machines {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	list-style: none;
+	padding: 0;
+}
+.station-card .machines li {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	grid-template-columns: none;
+}
+.add-machine {
+	width: 38px;
+	height: 52px;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	border-style: dashed;
+	background: transparent;
+	color: var(--muted);
+}
+.wear-ring .track {
+	fill: none;
+	stroke: #2b3137;
+	stroke-width: 4;
+}
+.wear-ring .arc {
+	fill: none;
+	stroke-width: 4;
+	stroke-linecap: round;
+	transition: stroke-dasharray 0.4s;
+}
+.wear-ring .pct {
+	fill: var(--text);
+	font: 700 11px var(--mono);
+}
+.service-bar {
+	position: relative;
+	display: block;
+	width: 38px;
+	height: 5px;
+	background: #2b3137;
+	border-radius: 3px;
+}
+.service-bar > span:first-child {
+	display: block;
+	height: 100%;
+	border-radius: 3px;
+}
+.service-bar .due {
+	position: absolute;
+	right: -6px;
+	top: -3px;
+	color: var(--muted);
+}
+.service-bar.never {
+	outline: 1px dashed var(--bad);
+}
+.station-card .actions button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* SPC zones */
+.spc-chart {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 4px;
+}
+.spc-chart .zone.green {
+	fill: #1f3a2b;
+}
+.spc-chart .zone.amber {
+	fill: #3a3219;
+}
+.spc-chart .zone.red {
+	fill: #3f1f1f;
+}
+.spc-chart .centre {
+	stroke: #3ec27a;
+	stroke-opacity: 0.35;
+	stroke-dasharray: 3 3;
+}
+.spc-chart .trace {
+	fill: none;
+	stroke: var(--text);
+	stroke-width: 1.5;
+}
+.spc-chart .out {
+	fill: var(--bad);
+}
+.spc-chart .now {
+	fill: var(--hazard);
+}
+.spc-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px;
+}
+.spc-grid .spc {
+	display: grid;
+	grid-template-columns: 18px 1fr;
+	align-items: center;
+	gap: 4px;
+	padding: 3px;
+	border-radius: 4px;
+}
+.spc-grid .spc.alarm {
+	box-shadow: inset 0 0 0 1px var(--bad);
+}
+
+/* Quality gates */
+.gates {
+	padding: 10px;
+	background: var(--bg);
+	border-radius: 6px;
+	margin-bottom: 8px;
+}
+.gate-line {
+	display: flex;
+	align-items: center;
+	color: var(--muted);
+}
+.gate-line .flow {
+	flex: 1;
+	height: 4px;
+	background: repeating-linear-gradient(
+		90deg,
+		#555e67 0 5px,
+		transparent 5px 9px
+	);
+	animation: stripe-9 0.6s linear infinite;
+	background-size: 9px 4px;
+}
+.gate-line .end {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: var(--panel-2);
+}
+.gate-line .end.plant {
+	border-radius: 6px;
+}
+.gate {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 2px 6px;
+	border-left: 3px solid;
+	border-right: 3px solid;
+	border-color: #3a424a;
+	font: 11px var(--mono);
+}
+.gate.open {
+	border-color: var(--info);
+	color: var(--info);
+}
+.bins {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 6px;
+	margin-top: 8px;
+}
+.bin {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 6px;
+	border-radius: 4px;
+	background: var(--panel-2);
+}
+.bin .count {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	font-size: 18px;
+	font-weight: 700;
+}
+.bin.field .count {
+	color: var(--bad);
+}
+.coins {
+	display: flex;
+	color: #3a424a;
+}
+.coins .lit {
+	color: var(--hazard);
+}
+
+/* Lot family tree */
+.family {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin: 8px 0;
+}
+.family .col {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.family .node {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	padding: 3px 6px;
+	border-radius: 4px;
+	background: var(--panel-2);
+}
+.family .node.me {
+	border: 1px solid var(--hazard);
+	padding: 6px 8px;
+}
+.family .node.recalled {
+	border-color: var(--bad);
+}
+.family .link {
+	flex: 1;
+	height: 2px;
+	background: var(--line);
+	position: relative;
+}
+.family .link::after {
+	content: "";
+	position: absolute;
+	right: -1px;
+	top: -4px;
+	border: 5px solid transparent;
+	border-left-color: var(--line);
+}
+.incidents li {
+	display: grid;
+	grid-template-columns: 16px 1fr auto;
+	gap: 6px;
+	align-items: center;
+}
+
+/* HUD */
+.stat.dial {
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+}
+.day-dial .night {
+	fill: #1b1f23;
+	stroke: #2b3137;
+	stroke-width: 4;
+}
+.day-dial .shift {
+	fill: none;
+	stroke: var(--hazard);
+	stroke-width: 4;
+}
+.day-dial .ship {
+	stroke: var(--ok);
+	stroke-width: 2;
+}
+.day-dial .hand {
+	stroke: var(--muted);
+	stroke-width: 2;
+	stroke-linecap: round;
+}
+.day-dial .hand.on {
+	stroke: var(--text);
+}
+.day-dial .hub {
+	fill: var(--text);
+}
+.cash-spark .bust {
+	fill: #4a1f1f;
+}
+.cash-spark .debt {
+	fill: #3a3219;
+}
+.cash-spark .line {
+	fill: none;
+	stroke: var(--ok);
+	stroke-width: 1.5;
+}
+.cash-spark .line.down {
+	stroke: var(--bad);
+}
+
+/* Floor labels: status icons and event pops */
+.floor-label {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.floor-label .missing {
+	position: relative;
+	display: inline-flex;
+	animation: blink 1s steps(2) infinite;
+}
+.floor-label .missing::after {
+	content: "";
+	position: absolute;
+	left: -2px;
+	right: -2px;
+	top: 50%;
+	height: 2px;
+	background: var(--bad);
+	transform: rotate(-35deg);
+}
+.floor-label.pop {
+	background: none;
+	border: 0;
+	padding: 0;
+	font-size: 20px;
+	font-weight: 800;
+	text-transform: none;
+	font-family: var(--mono);
+	text-shadow: 0 1px 3px #000;
+}
+.floor-label.pop .rise {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	filter: drop-shadow(0 1px 2px #000);
+	animation: pop-rise 2.6s ease-out forwards;
+}
+@keyframes pop-rise {
+	0% {
+		transform: translateY(8px) scale(0.6);
+		opacity: 0;
+	}
+	12% {
+		transform: translateY(0) scale(1.1);
+		opacity: 1;
+	}
+	20% {
+		transform: scale(1);
+	}
+	75% {
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(-36px);
+		opacity: 0;
+	}
+}
+.floor-label.pop.good {
+	color: var(--ok);
+}
+.floor-label.pop.info {
+	color: var(--info);
+}
+.floor-label.pop.bad {
+	color: var(--bad);
+}
+.floor-label.pop.warn,
+.floor-label.pop.gold {
+	color: var(--hazard);
+}
+
+/* Coach marks */
+.coach-ring {
+	position: fixed;
+	z-index: 50;
+	pointer-events: none;
+	border: 3px solid var(--hazard);
+	border-radius: 10px;
+	box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.35);
+	animation: ring-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ring-pulse {
+	50% {
+		border-color: #fff3c4;
+		outline: 6px solid rgb(242 183 5 / 0.25);
+	}
+}
+.coach {
+	position: fixed;
+	z-index: 51;
+	width: 320px;
+	background: var(--panel);
+	border: 1px solid var(--hazard);
+	border-top-width: 4px;
+	border-radius: 8px;
+	padding: 10px 12px;
+	box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+	animation: toast-in 0.25s ease-out;
+}
+.coach.centre {
+	left: 50%;
+	top: 30%;
+	width: min(460px, calc(100% - 24px));
+	transform: translate(-50%, 0);
+	text-align: center;
+}
+.coach .caption {
+	font-size: 18px;
+	font-weight: 600;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+}
+.coach:not(.centre) .caption {
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+}
+.coach .caption p {
+	margin: 0;
+}
+.coach-foot {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 10px;
+}
+.coach-foot .steps {
+	display: flex;
+	gap: 4px;
+	margin-right: auto;
+}
+.coach-foot .steps i {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--line);
+}
+.coach-foot .steps i.done {
+	background: var(--muted);
+}
+.coach-foot .steps i.now {
+	background: var(--hazard);
+}
+
+/* The game loop picture */
+.loop {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 12px 4px;
+}
+.loop-stage {
+	display: grid;
+	grid-template-columns: repeat(2, auto);
+	place-items: center;
+	gap: 2px;
+	padding: 6px;
+	border-radius: 8px;
+	background: var(--bg);
+}
+.loop-arrow {
+	flex: 1;
+	min-width: 16px;
+	height: 4px;
+	background: repeating-linear-gradient(
+		90deg,
+		var(--hazard) 0 5px,
+		transparent 5px 9px
+	);
+	background-size: 9px 4px;
+	animation: stripe-9 0.5s linear infinite;
+}
+.loop .drift {
+	animation: drift 1.6s ease-in-out infinite;
+}
+@keyframes drift {
+	50% {
+		transform: translateX(4px);
+	}
+}
+.loop .spin {
+	animation: spin 2s linear infinite;
+}
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+.loop .drive {
+	color: var(--ok);
+	animation: drive 1.2s ease-in-out infinite;
+}
+@keyframes drive {
+	50% {
+		transform: translateX(5px);
+	}
+}
+.loop .bounce {
+	animation: bounce 0.9s ease-in-out infinite;
+}
+@keyframes bounce {
+	50% {
+		transform: translateY(-5px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.loop *,
+	.coach-ring,
+	.coach,
+	.pipe.starved .pipe-wall,
+	.stock-node.empty,
+	.flow-node.state-broken,
+	.flow-node.state-starved,
+	.ingredient.starved,
+	.floor-label .missing,
+	.pipe-core,
+	.belt,
+	.gate-line .flow,
+	.floor-label.pop .rise {
+		animation: none;
+	}
+}
+
+/* The card can outgrow a short floor (phones); let it scroll. */
+.station-card {
+	max-height: calc(100% - 24px);
+	overflow-y: auto;
+}
+
+.stock-node .icon {
+	width: 64%;
+	height: auto;
+}
+
+/* Text for screen readers only. */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* Trace columns are lists of lot buttons. */
+.family ul.col,
+.family div.col {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+.family button.node {
+	font-size: 13px;
+}
+.incidents .when {
+	font: 11px var(--mono);
+	color: var(--muted);
+}

@@ -7,7 +7,6 @@ import {
 	useState,
 } from "react";
 import { setHum, sfx, stopHum } from "../audio/sfx";
-import { beaconState } from "../floor/status";
 import { DAILY_DAYS, dailyScore, type Mode } from "../modes";
 import { recordDailyResult } from "../settings";
 import type { GameEvent, StationKind } from "../sim/types";
@@ -15,10 +14,12 @@ import { type Speed, useGame } from "../sim/useGame";
 import type { Sim } from "../sim/wasm";
 import { formatMoney } from "./format";
 import { Hud } from "./Hud";
+import type { PartFocus } from "./panels/SupplyPanel";
 import { Sidebar, type Tab } from "./Sidebar";
 import { StationCard } from "./StationCard";
 import { Toasts } from "./Toasts";
 import { Tutorial } from "./Tutorial";
+import { FlowMap } from "./visual/FlowMap";
 
 // three.js is the bulk of the bundle; load it after the menu.
 const FactoryFloor = lazy(() =>
@@ -66,6 +67,7 @@ export function GameScreen({
 	const [selected, setSelected] = useState<StationKind | null>(null);
 	const [tab, setTab] = useState<Tab>("contracts");
 	const [traceLot, setTraceLot] = useState<number | null>(null);
+	const [focusPart, setFocusPart] = useState<PartFocus | null>(null);
 	const { view, speed, setSpeed } = game;
 	const noticeTimer = useRef<number | undefined>(undefined);
 	useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
@@ -215,6 +217,7 @@ export function GameScreen({
 						<Suspense fallback={<div className="loading">Loading floor…</div>}>
 							<FactoryFloor
 								view={view}
+								events={game.events}
 								selected={selected}
 								onSelect={setSelected}
 							/>
@@ -248,23 +251,15 @@ export function GameScreen({
 								}}
 							/>
 						)}
-						{/* Keyboard and screen-reader route to every station. */}
-						<nav className="station-strip" aria-label="Stations">
-							{view.stations.map((st) => (
-								<button
-									type="button"
-									key={st.kind}
-									data-station={st.kind}
-									aria-pressed={selected === st.kind}
-									className={`strip-btn beacon-${beaconState(st, view.operating)}${selected === st.kind ? " on" : ""}`}
-									onClick={() =>
-										setSelected(selected === st.kind ? null : st.kind)
-									}
-								>
-									{st.label}
-								</button>
-							))}
-						</nav>
+						<FlowMap
+							view={view}
+							selected={selected}
+							onSelect={setSelected}
+							onPart={(item) => {
+								setFocusPart((f) => ({ item, n: (f?.n ?? 0) + 1 }));
+								setTab("supply");
+							}}
+						/>
 					</section>
 					<Sidebar
 						game={game}
@@ -272,6 +267,7 @@ export function GameScreen({
 						setTab={setTab}
 						traceLot={traceLot}
 						setTraceLot={setTraceLot}
+						focusPart={focusPart}
 					/>
 				</main>
 			</div>

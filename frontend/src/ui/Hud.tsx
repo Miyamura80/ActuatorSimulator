@@ -1,6 +1,8 @@
 import { DAILY_DAYS, type Mode, modeLabel } from "../modes";
 import type { Game, Speed } from "../sim/useGame";
 import { formatClock, formatMoney } from "./format";
+import { Glyph } from "./visual/glyphs";
+import { CashSpark, DayDial } from "./visual/HudWidgets";
 
 const SPEEDS: { s: Speed; label: string }[] = [
 	{ s: 0, label: "❚❚" },
@@ -21,18 +23,18 @@ interface Props {
 export function Hud({ game, mode, onSave, onExit, onSettings, notice }: Props) {
 	const { view, speed, setSpeed, act } = game;
 	const over = view.status.state !== "running";
-	const cashClass = view.cash < 0 ? "stat bad" : "stat";
+	const cashClass = view.cash < 0 ? "stat cash bad" : "stat cash";
 	return (
 		<header className="hud">
 			<div className="brand">
 				<div className="hazard small" />
 				Actuator Works
 			</div>
-			<div className="stat">
-				<span className="k">Time</span>
+			<div className="stat dial">
+				<DayDial hour={view.hour} shifts={view.policies.shifts} />
 				<span className="v">
 					{mode.kind === "daily" && view.day >= DAILY_DAYS
-						? `Day ${DAILY_DAYS} · final`
+						? `Day ${DAILY_DAYS}`
 						: formatClock(view.day, view.hour)}
 					{mode.kind === "daily" && (
 						<span className="muted"> / {DAILY_DAYS}</span>
@@ -40,12 +42,14 @@ export function Hud({ game, mode, onSave, onExit, onSettings, notice }: Props) {
 				</span>
 			</div>
 			<div className={cashClass}>
-				<span className="k">Cash</span>
+				<CashSpark view={view} />
+				<span className="sr-only">Cash</span>
 				<span className="v">{formatMoney(view.cash)}</span>
 			</div>
 			<div className="stat">
-				<span className="k">Reputation</span>
-				<span className="v">
+				<span className="v" title="Reputation: wins bigger contracts">
+					<Glyph name="star" size={14} className="gold" />
+					<span className="sr-only">Reputation</span>
 					<span className="meter">
 						<span style={{ width: `${view.reputation}%` }} />
 					</span>
@@ -53,8 +57,9 @@ export function Hud({ game, mode, onSave, onExit, onSettings, notice }: Props) {
 				</span>
 			</div>
 			<div className="stat">
-				<span className="k">Shifts</span>
-				<span className="v seg">
+				<span className="v seg" title="Shifts per day">
+					<Glyph name="user" size={14} className="muted" />
+					<span className="sr-only">Shifts</span>
 					{[1, 2, 3].map((n) => (
 						<button
 							type="button"

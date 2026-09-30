@@ -3,7 +3,7 @@ import { ContractsPanel } from "./panels/ContractsPanel";
 import { LogPanel } from "./panels/LogPanel";
 import { QualityPanel } from "./panels/QualityPanel";
 import { StatsPanel } from "./panels/StatsPanel";
-import { SupplyPanel } from "./panels/SupplyPanel";
+import { type PartFocus, SupplyPanel } from "./panels/SupplyPanel";
 
 export type Tab = "contracts" | "supply" | "quality" | "stats" | "log";
 
@@ -13,9 +13,18 @@ interface Props {
 	setTab: (t: Tab) => void;
 	traceLot: number | null;
 	setTraceLot: (lot: number | null) => void;
+	/** A part picked on the flow map; the Supply tab opens it. */
+	focusPart: PartFocus | null;
 }
 
-export function Sidebar({ game, tab, setTab, traceLot, setTraceLot }: Props) {
+export function Sidebar({
+	game,
+	tab,
+	setTab,
+	traceLot,
+	setTraceLot,
+	focusPart,
+}: Props) {
 	const { view } = game;
 	const offers = view.contracts.filter((c) => c.status === "offered").length;
 	const alarms = view.stations.filter((s) => s.spc_alarm).length;
@@ -79,7 +88,7 @@ export function Sidebar({ game, tab, setTab, traceLot, setTraceLot }: Props) {
 				aria-labelledby={`tab-${tab}`}
 			>
 				{tab === "contracts" && <ContractsPanel game={game} />}
-				{tab === "supply" && <SupplyPanel game={game} />}
+				{tab === "supply" && <SupplyPanel game={game} focusPart={focusPart} />}
 				{tab === "quality" && (
 					<QualityPanel
 						game={game}
