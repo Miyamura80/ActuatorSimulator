@@ -91,6 +91,7 @@ function staticPieces(all: BeltParts[]): StaticSet {
 		}
 		out.cross.push({ p: at(u, 0.16, 0), r: [0, angle, 0] });
 	};
+	const drumAt = new Set<string>();
 	for (const belt of all) {
 		for (const { seg, rails, legs } of belt.segments) {
 			const at = frame(seg.a, seg.angle);
@@ -127,6 +128,10 @@ function staticPieces(all: BeltParts[]): StaticSet {
 			}
 		}
 		for (const e of belt.ends) {
+			// Belts butt end to end at every cell; one roller serves both.
+			const key = `${e.at[0].toFixed(2)},${e.at[1].toFixed(2)}`;
+			if (drumAt.has(key)) continue;
+			drumAt.add(key);
 			out.drums.push({
 				p: [e.at[0], BELT_Y - 0.06, e.at[1]],
 				r: [Math.PI / 2, e.angle, 0],

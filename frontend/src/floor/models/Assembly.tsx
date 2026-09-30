@@ -193,8 +193,11 @@ export function TestBench({
 }) {
 	const dut = useSpin(busy, 4);
 	const screen = useRef<THREE.MeshBasicMaterial>(null);
-	useFrame((_, dt) => {
-		if (busy && screen.current?.map) screen.current.map.offset.x += dt * 0.25;
+	// The trace texture is shared by every tester, so derive its scroll from
+	// the clock rather than adding per-screen deltas.
+	useFrame(({ clock }) => {
+		if (busy && screen.current?.map)
+			screen.current.map.offset.x = clock.elapsedTime * 0.25;
 	});
 	const failed = beacon === "broken";
 	return (

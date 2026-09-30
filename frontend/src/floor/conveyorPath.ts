@@ -62,9 +62,12 @@ export function segmentsOf(points: Vec2[]): Segment[] {
 	return out;
 }
 
-/** Which side of `d1` a turn onto `d2` goes toward (+1 = local +z). */
-function turnSide(d1: Vec2, d2: Vec2): -1 | 1 {
-	return d1[0] * d2[1] - d1[1] * d2[0] > 0 ? 1 : -1;
+/** Which side of `d1` a turn onto `d2` goes toward (+1 = local +z); 0 when
+ * the two run straight on. */
+function turnSide(d1: Vec2, d2: Vec2): -1 | 0 | 1 {
+	const cross = d1[0] * d2[1] - d1[1] * d2[0];
+	if (Math.abs(cross) < EPS) return 0;
+	return cross > 0 ? 1 : -1;
 }
 
 /** Where a merging belt's end lands on this segment, if it does. */
@@ -100,10 +103,12 @@ export function beltParts(c: Conveyor, all: Conveyor[]): BeltParts {
 	const ends: BeltParts["ends"] = [];
 
 	const segments = segs.map((seg, i) => {
-		const turnIn = i > 0 ? turnSide(segs[i - 1].dir, seg.dir) : null;
-		const turnOut = i < last ? turnSide(seg.dir, segs[i + 1].dir) : null;
-		const startCut = i > 0 || c.fromJunction ? hw : 0;
-		const endCut = i < last || c.intoJunction ? hw : 0;
+		// A straight-through waypoint is not a corner: pieces just meet there.
+		const bend = (t: -1 | 0 | 1) => (t === 0 ? null : t);
+		const turnIn = i > 0 ? bend(turnSide(segs[i - 1].dir, seg.dir)) : null;
+		const turnOut = i < last ? bend(turnSide(seg.dir, segs[i + 1].dir)) : null;
+		const startCut = turnIn !== null || (i === 0 && c.fromJunction) ? hw : 0;
+		const endCut = turnOut !== null || (i === last && c.intoJunction) ? hw : 0;
 		const plate = { u0: startCut, u1: seg.len - endCut };
 		const rails = ([-1, 1] as const).map((side) => {
 			// At a corner the outer rail runs on around it; the inner one stops short.
@@ -130,7 +135,8 @@ export function beltParts(c: Conveyor, all: Conveyor[]): BeltParts {
 		for (let k = 0; k < n; k++) {
 			legs.push(plate.u0 + ((k + 0.5) * (plate.u1 - plate.u0)) / n);
 		}
-		if (i > 0) corners.push({ at: seg.a, angle: seg.angle, backRail: false });
+		if (turnIn !== null)
+			corners.push({ at: seg.a, angle: seg.angle, backRail: false });
 		return { seg, plate, rails, legs };
 	});
 

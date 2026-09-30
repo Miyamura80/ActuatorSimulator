@@ -2,6 +2,7 @@
 // back wall with columns and clerestory windows, storage racks, a forklift.
 import { useMemo } from "react";
 import * as THREE from "three";
+import { TAPE } from "./Docks";
 import { CELL_HALF_D, CELL_HALF_W, PLANT_BOUNDS, STATION_POS } from "./layout";
 import { G, M, MAT, Static, tinted, type Xform } from "./models/kit";
 
@@ -238,7 +239,7 @@ function Racks({ racks }: { racks: { x: number; z: number; bays: number }[] }) {
 							const bz = z + Math.floor((k % 4) / 2) * 0.36 - 0.18;
 							const by = y + 0.36 + Math.floor(k / 4) * 0.3;
 							out.box.push({ p: [bx, by, bz] });
-							out.tape.push({ p: [bx, by, bz] });
+							out.tape.push({ p: [bx, by + 0.142, bz] });
 						}
 					}
 				});
@@ -252,7 +253,7 @@ function Racks({ racks }: { racks: { x: number; z: number; bays: number }[] }) {
 			<Static g={G.box(0.8, 0.03, 0.8)} m={MAT.wood} items={set.deck} />
 			<Static g={G.box(0.8, 0.1, 0.1)} m={MAT.wood} items={set.runner} />
 			<Static g={G.box(0.34, 0.28, 0.34)} m={MAT.cardboard} items={set.box} />
-			<Static g={G.box(0.345, 0.285, 0.06)} m={MAT.tape} items={set.tape} />
+			<Static g={TAPE} m={MAT.tape} items={set.tape} />
 		</group>
 	);
 }

@@ -6,7 +6,7 @@ import {
 	OrthographicCamera,
 } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { StationKind, StationView, View } from "../sim/types";
 import { Building } from "./Building";
@@ -27,7 +27,7 @@ import {
 	STATION_POS,
 } from "./layout";
 import { Beacon, MachineModel } from "./models";
-import { G, M, MAT, Static } from "./models/kit";
+import { G, M, MAT, Static, type Xform } from "./models/kit";
 import { tinted } from "./palette";
 import { beaconState } from "./status";
 
@@ -71,6 +71,7 @@ const CAMERA_POS = TARGET.clone().add(VIEW_DIR).toArray();
 
 /** Zoom at which the plant's bounding box fills the canvas. */
 function fitZoom(camera: THREE.Camera, width: number, height: number) {
+	camera.updateMatrixWorld();
 	const center = TARGET.clone().applyMatrix4(camera.matrixWorldInverse);
 	let dx = 0;
 	let dy = 0;
@@ -171,6 +172,15 @@ function Station({ st, view, selected, onSelect }: StationProps) {
 	const [x, z] = STATION_POS[st.kind];
 	const beacon = beaconState(st, view.operating);
 	const buffer = view.stock.find((s) => s.item === st.output)?.qty ?? 0;
+	const filled = st.machines.length;
+	const emptyBays = useMemo(
+		() =>
+			Array.from({ length: MAX_SLOTS - filled }, (_, k): Xform => {
+				const slot = machineSlot(filled + k);
+				return { p: [slot.x, 0.064, slot.z] };
+			}),
+		[filled],
+	);
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: an r3f scene object, not a DOM node; keyboard access comes from the station list in the UI
 		<group
@@ -217,13 +227,7 @@ function Station({ st, view, selected, onSelect }: StationProps) {
 				g={G.box(1.6, 0.004, 1.5)}
 				m={MAT.bay}
 				shadow={false}
-				items={Array.from(
-					{ length: MAX_SLOTS - st.machines.length },
-					(_, k) => {
-						const slot = machineSlot(st.machines.length + k);
-						return { p: [slot.x, 0.064, slot.z] };
-					},
-				)}
+				items={emptyBays}
 			/>
 			{st.machines.map((m, i) => {
 				const slot = machineSlot(i);

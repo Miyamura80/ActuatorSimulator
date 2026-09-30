@@ -1,42 +1,47 @@
 // Loading docks, the trucks backed onto them, and pallets of boxes.
+import { useMemo } from "react";
 import type { Vec2 } from "./layout";
-import { G, M, MAT } from "./models/kit";
+import { G, M, MAT, Static, type Xform } from "./models/kit";
+
+/** Packing tape across the top of a box. */
+export const TAPE = G.box(0.07, 0.006, 0.345);
+const BOX = G.box(0.34, 0.28, 0.34);
+const RUNNER = G.box(0.8, 0.1, 0.1);
+const SLAT = G.box(0.1, 0.03, 0.8);
 
 /** A pallet with boxes on it; roughly how full a buffer is (log scale). */
 export function CrateStack({ pos, qty }: { pos: Vec2; qty: number }) {
 	const n = qty <= 0 ? 0 : Math.min(12, Math.ceil(Math.log2(qty + 1) * 1.6));
+	// Each shape is one instanced draw; only rebuilt when the box count changes.
+	const set = useMemo(() => {
+		const box: Xform[] = [];
+		const tape: Xform[] = [];
+		for (let i = 0; i < n; i++) {
+			const slot = i % 4;
+			const x = (slot % 2) * 0.36 - 0.18;
+			const z = Math.floor(slot / 2) * 0.36 - 0.18;
+			const y = 0.3 + Math.floor(i / 4) * 0.3;
+			box.push({ p: [x, y, z] });
+			tape.push({ p: [x, y + 0.142, z] });
+		}
+		return { box, tape };
+	}, [n]);
 	return (
 		<group position={[pos[0], 0, pos[1]]}>
-			<Pallet />
-			{Array.from({ length: n }, (_, i) => {
-				const layer = Math.floor(i / 4);
-				const slot = i % 4;
-				const x = (slot % 2) * 0.36 - 0.18;
-				const z = Math.floor(slot / 2) * 0.36 - 0.18;
-				return (
-					// biome-ignore lint/suspicious/noArrayIndexKey: boxes are interchangeable
-					<group key={i} position={[x, 0.3 + layer * 0.3, z]}>
-						<M g={G.box(0.34, 0.28, 0.34)} m={MAT.cardboard} />
-						<M g={G.box(0.345, 0.285, 0.06)} m={MAT.tape} />
-					</group>
-				);
-			})}
+			<Static g={RUNNER} m={MAT.wood} items={PALLET.runners} />
+			<Static g={SLAT} m={MAT.wood} items={PALLET.slats} />
+			<Static g={BOX} m={MAT.cardboard} items={set.box} />
+			<Static g={TAPE} m={MAT.tape} items={set.tape} shadow={false} />
 		</group>
 	);
 }
 
-function Pallet() {
-	return (
-		<group>
-			{[-0.3, 0, 0.3].map((z) => (
-				<M key={z} g={G.box(0.8, 0.1, 0.1)} m={MAT.wood} p={[0, 0.05, z]} />
-			))}
-			{[-0.33, -0.2, -0.07, 0.07, 0.2, 0.33].map((x) => (
-				<M key={x} g={G.box(0.1, 0.03, 0.8)} m={MAT.wood} p={[x, 0.12, 0]} />
-			))}
-		</group>
-	);
-}
+const PALLET: { runners: Xform[]; slats: Xform[] } = {
+	runners: [-0.3, 0, 0.3].map((z) => ({ p: [0, 0.05, z] })),
+	slats: [-0.33, -0.2, -0.07, 0.07, 0.2, 0.33].map((x) => ({
+		p: [x, 0.12, 0],
+	})),
+};
 
 /** Box truck; the cargo doors face +x. */
 function Truck() {
