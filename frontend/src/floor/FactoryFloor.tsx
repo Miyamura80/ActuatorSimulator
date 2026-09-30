@@ -6,9 +6,18 @@ import {
 	OrthographicCamera,
 } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import * as THREE from "three";
-import type { StationKind, StationView, View } from "../sim/types";
+import type { GameEvent, StationKind, StationView, View } from "../sim/types";
+import { Glyph } from "../ui/visual/glyphs";
+import { ItemIcon } from "../ui/visual/icons";
 import { Building } from "./Building";
 import { Conveyors } from "./Conveyors";
 import { CrateStack, Dock } from "./Docks";
@@ -29,6 +38,7 @@ import {
 import { Beacon, MachineModel } from "./models";
 import { G, M, MAT, Static, type Xform } from "./models/kit";
 import { tinted } from "./palette";
+import { type Pop, popFor } from "./pops";
 import { beaconState } from "./status";
 
 const [MIN_X, MAX_X, MIN_Z, MAX_Z] = PLANT_BOUNDS;
@@ -254,13 +264,70 @@ function Station({ st, view, selected, onSelect }: StationProps) {
 	);
 }
 
+/** What a station label shows before its name: the reason it isn't running. */
+function statusIcon(st: StationView, view: View): ReactNode {
+	switch (beaconState(st, view.operating)) {
+		case "starved":
+			return st.starved_on ? (
+				<span className="missing">
+					<ItemIcon item={st.starved_on} size={16} />
+				</span>
+			) : null;
+		case "broken":
+		case "degraded":
+			return <Glyph name="bolt" size={14} className="bad" />;
+		case "maintenance":
+			return <Glyph name="wrench" size={14} />;
+		case "alarm":
+			return <Glyph name="alert" size={14} />;
+		default:
+			return null;
+	}
+}
+
+const POP_MS = 2600;
+const MAX_POPS = 10;
+
+/** Events from the last few seconds, as floor labels. */
+function usePops(events: GameEvent[]): Pop[] {
+	const [pops, setPops] = useState<Pop[]>([]);
+	const last = useRef(events.length > 0 ? events[events.length - 1].seq : -1);
+	const timers = useRef(new Set<number>());
+	useEffect(() => {
+		const pending = timers.current;
+		return () => {
+			for (const t of pending) window.clearTimeout(t);
+		};
+	}, []);
+	useEffect(() => {
+		const fresh: Pop[] = [];
+		for (const e of events) {
+			if (e.seq <= last.current) continue;
+			const p = popFor(e);
+			if (p) fresh.push({ ...p, id: `pop-${e.seq}` });
+		}
+		if (events.length > 0) last.current = events[events.length - 1].seq;
+		if (fresh.length === 0) return;
+		setPops((prev) => [...prev, ...fresh].slice(-MAX_POPS));
+		const ids = new Set(fresh.map((p) => p.id));
+		const t = window.setTimeout(() => {
+			timers.current.delete(t);
+			setPops((prev) => prev.filter((p) => !ids.has(p.id)));
+		}, POP_MS);
+		timers.current.add(t);
+	}, [events]);
+	return pops;
+}
+
 interface Props {
 	view: View;
+	events: GameEvent[];
 	selected: StationKind | null;
 	onSelect: (k: StationKind | null) => void;
 }
 
-export function FactoryFloor({ view, selected, onSelect }: Props) {
+export function FactoryFloor({ view, events, selected, onSelect }: Props) {
+	const pops = usePops(events);
 	const byKind = new Map(view.stations.map((s) => [s.kind, s]));
 	const isBusy = (c: Conveyor) => Boolean(byKind.get(c.driver)?.busy);
 	const labelRefs = useRef(new Map<string, HTMLDivElement>());
@@ -268,9 +335,15 @@ export function FactoryFloor({ view, selected, onSelect }: Props) {
 		...view.stations.map((st) => {
 			const [x, z] = STATION_POS[st.kind];
 			const beacon = beaconState(st, view.operating);
+			const icon = statusIcon(st, view);
 			return {
 				id: st.kind,
 				text: st.label,
+				content: icon ? (
+					<>
+						{icon} {st.label}
+					</>
+				) : undefined,
 				anchor: [x - 0.5, 2.9, z - CELL_HALF_D] as [number, number, number],
 				className: `beacon-${beacon}${selected === st.kind ? " selected" : ""}`,
 			};
@@ -287,6 +360,19 @@ export function FactoryFloor({ view, selected, onSelect }: Props) {
 			anchor: [SHIPPING[0], 3.6, SHIPPING[1] - 4],
 			className: "dock",
 		},
+		// Stack pops that share an anchor so they don't sit on each other.
+		...pops.map((p, i) => {
+			const twins = pops.slice(0, i).filter((q) => q.anchor === p.anchor);
+			const [x, y, z] = p.anchor;
+			return {
+				id: p.id,
+				text: "",
+				// The outer label is moved every frame; the inner span rises.
+				content: <span className="rise">{p.content}</span>,
+				anchor: [x, y + twins.length * 0.9, z] as [number, number, number],
+				className: p.className,
+			};
+		}),
 	];
 	return (
 		<div className="floor-canvas">

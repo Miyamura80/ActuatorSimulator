@@ -192,6 +192,17 @@ frequency, machine wear, and contract strictness: Easy / Normal / Hard.
   repeats of the same message collapse with a count. Lot tracing goes through
   `sim::trace::report`, which exposes genealogy and shipped units but never
   hidden defect counts.
+- **Show, don't tell** (post-M7): the UI teaches with pictures. A live flow
+  map replaces the station strip: pipe width is capacity per hour (the
+  bottleneck is the thinnest pipe), material flows while a station runs,
+  counts on the pipes are buffers, and part rings show stock. Contracts get
+  a deadline track with a forecast truck (bottleneck rate, deadline order,
+  the way the sim ships), suppliers are cards (stars, price, lead time, lot
+  record), inspection plans are a 20-unit strip, orders are trucks on a
+  road, machines are wear rings, SPC charts are green/amber/red zones, and
+  quality is a gate diagram with a cost scale per catch point. Events pop
+  up in the 3D view where they happen. The tutorial is coach marks: a ring
+  on the control and a few words.
 - **Daily challenge**: the seed is an FNV-1a hash of the UTC date, Normal
   difficulty, 30 game days. Score = cash + $2,000 per reputation point (0 if
   bankrupt). Best score per date is kept in localStorage. Daily runs never

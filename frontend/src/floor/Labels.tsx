@@ -3,12 +3,14 @@
 // per label, which races StrictMode's double mount under React 19 and can
 // drop labels.)
 import { useFrame, useThree } from "@react-three/fiber";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import * as THREE from "three";
 
 export interface Label {
 	id: string;
 	text: string;
+	/** Rendered instead of `text` when present. */
+	content?: ReactNode;
 	anchor: [number, number, number];
 	className: string;
 }
@@ -52,7 +54,7 @@ export function LabelLayer({ labels, refs }: { labels: Label[]; refs: Refs }) {
 						else refs.current?.delete(l.id);
 					}}
 				>
-					{l.text}
+					{l.content ?? l.text}
 				</div>
 			))}
 		</div>

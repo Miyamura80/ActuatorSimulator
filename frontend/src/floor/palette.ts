@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import type { Item } from "../sim/types";
+import { BEACON, type BeaconState, ITEM_COLOR } from "../ui/visual/colors";
+
+export { BEACON, type BeaconState };
 
 const COLORS = {
 	floor: "#3a3f45",
@@ -17,37 +20,6 @@ const COLORS = {
 	crate: "#b07a44",
 	pallet: "#8a6a45",
 	wall: "#5a6068",
-};
-
-export const BEACON = {
-	running: "#3ec27a",
-	starved: "#f2b705",
-	alarm: "#ff9f1a",
-	degraded: "#ff7043",
-	broken: "#ef5350",
-	maintenance: "#64a8ff",
-	off: "#59616a",
-} as const;
-
-export type BeaconState = keyof typeof BEACON;
-
-/** Part colors on the belts, so flows are readable at a glance. */
-const ITEM_COLOR: Record<Item, string> = {
-	alu_billet: "#c9d1d9",
-	steel_blank: "#7d8894",
-	copper_wire: "#d9823b",
-	laminations: "#6f7a86",
-	bearing: "#b8c2cc",
-	encoder_ic: "#2b2f35",
-	pcb_blank: "#3aa35b",
-	magnets: "#8a5cc2",
-	housing: "#e6e9ec",
-	gear_set: "#9aa6b2",
-	stator: "#c46a2a",
-	driver_board: "#1f7a44",
-	motor: "#4f79c7",
-	actuator: "#f2b705",
-	finished_good: "#3ec27a",
 };
 
 // Shared PBR materials. Machines reuse these instead of making one per mesh.

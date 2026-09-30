@@ -1,24 +1,43 @@
-import { useState } from "react";
-import type { Item, SupplierView } from "../../sim/types";
+import { useEffect, useRef, useState } from "react";
+import type { Item } from "../../sim/types";
 import type { Game } from "../../sim/useGame";
-import { formatMoney, formatTick } from "../format";
+import { formatMoney } from "../format";
 import { IntField } from "../IntField";
-import { planFromKey, planKey, planOptions } from "./plans";
+import {
+	LotRecord,
+	Road,
+	SampleGate,
+	StockGauge,
+	TierStars,
+} from "../visual/gauges";
+import { Glyph } from "../visual/glyphs";
+import { ItemIcon } from "../visual/icons";
 
-function tierLabel(s: SupplierView) {
-	const record =
-		s.lots_received > 0
-			? ` · ${s.lots_rejected}/${s.lots_received} rejected`
-			: "";
-	return `${s.tier}${record}`;
+export interface PartFocus {
+	item: Item;
+	/** Bumped on every pick, so picking the same part again still opens it. */
+	n: number;
 }
 
-function PartRow({ game, item }: { game: Game; item: Item }) {
+function PartRow({
+	game,
+	item,
+	open,
+	onToggle,
+}: {
+	game: Game;
+	item: Item;
+	open: boolean;
+	onToggle: () => void;
+}) {
 	const { view, act } = game;
-	const [open, setOpen] = useState(false);
 	const [qty, setQty] = useState(200);
 	const [expedite, setExpedite] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const row = useRef<HTMLLIElement>(null);
+	useEffect(() => {
+		if (open) row.current?.scrollIntoView({ block: "nearest" });
+	}, [open]);
 	const stock = view.stock.find((s) => s.item === item);
 	const policy = view.policies.reorder[item];
 	const suppliers = view.suppliers.filter((s) => s.item === item);
@@ -29,105 +48,95 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 	const belowMin = current !== undefined && qty < current.min_order;
 	const setPolicy = (patch: Partial<typeof policy>) =>
 		setError(act({ type: "set_reorder", item, ...policy, ...patch }));
+	const scale = Math.max(
+		policy.reorder_point * 2,
+		stock.qty + stock.on_order,
+		policy.order_qty,
+	);
 
 	return (
-		<li className="part">
+		<li className={`part${open ? " open" : ""}`} ref={row}>
 			<button
 				type="button"
 				className="part-head"
-				onClick={() => setOpen(!open)}
+				onClick={onToggle}
 				aria-expanded={open}
 			>
-				<strong>{stock.label}</strong>
+				<ItemIcon item={item} size={22} />
+				<span className="part-name">{stock.label}</span>
+				<StockGauge
+					qty={stock.qty}
+					incoming={stock.on_order}
+					reorder={policy.enabled ? policy.reorder_point : 0}
+					scale={scale}
+				/>
 				<span className="num">{stock.qty}</span>
-				<span className="muted num">+{stock.on_order} on order</span>
-				<span className={current?.price_spike ? "warn-text" : "muted"}>
-					{current?.name ?? "no supplier"}
-				</span>
 			</button>
 			{open && (
 				<div className="part-body">
-					<div className="grid2">
-						<label>
-							Supplier
-							<select
-								value={policy.supplier}
-								onChange={(e) =>
-									setPolicy({ supplier: Number(e.target.value) })
-								}
-							>
-								{suppliers
-									.filter((s) => s.active)
-									.map((s) => (
-										<option key={s.id} value={s.id}>
-											{s.name} · {formatMoney(s.price)} · {s.lead_days}d ·{" "}
-											{s.tier}
-										</option>
-									))}
-							</select>
-						</label>
-						<label>
-							Incoming inspection
-							<select
-								value={planKey(view.policies.iqc[item])}
-								onChange={(e) =>
-									setError(
-										act({
-											type: "set_iqc",
-											item,
-											plan: planFromKey(e.target.value),
-										}),
-									)
-								}
-							>
-								{planOptions(view.policies.iqc[item]).map((o) => (
-									<option key={o.key} value={o.key}>
-										{o.label}
-									</option>
-								))}
-							</select>
-						</label>
-						<label>
-							Reorder below
-							<IntField
-								min={0}
-								value={policy.reorder_point}
-								onCommit={(n) => setPolicy({ reorder_point: n })}
-							/>
-						</label>
-						<label>
-							Order quantity
-							<IntField
-								min={1}
-								value={policy.order_qty}
-								onCommit={(n) => setPolicy({ order_qty: n })}
-							/>
-						</label>
-					</div>
-					<label className="check">
-						<input
-							type="checkbox"
-							checked={policy.enabled}
-							onChange={(e) => setPolicy({ enabled: e.target.checked })}
-						/>
-						Auto-reorder
-					</label>
-					<table className="suppliers">
-						<tbody>
-							{suppliers.map((s) => (
-								<tr key={s.id} className={s.active ? "" : "gone"}>
-									<td>{s.name}</td>
-									<td className="muted">
-										{s.active ? tierLabel(s) : "bankrupt"}
-									</td>
-									<td className={s.price_spike ? "num warn-text" : "num"}>
+					<div className="supplier-cards">
+						{suppliers
+							.filter((s) => s.active)
+							.map((s) => (
+								<button
+									type="button"
+									aria-pressed={s.id === policy.supplier}
+									key={s.id}
+									className={`supplier${s.id === policy.supplier ? " on" : ""}`}
+									onClick={() => setPolicy({ supplier: s.id })}
+									title={s.name}
+								>
+									<TierStars tier={s.tier} />
+									<span className={s.price_spike ? "price spike" : "price"}>
 										{formatMoney(s.price)}
-									</td>
-									<td className="num">{s.lead_days}d</td>
-								</tr>
+										{s.price_spike && <Glyph name="alert" size={11} />}
+									</span>
+									<span className="lead">
+										<Glyph name="truck" size={13} />
+										{s.lead_days}d
+									</span>
+									<LotRecord
+										received={s.lots_received}
+										rejected={s.lots_rejected}
+									/>
+									<span className="name">{s.name}</span>
+								</button>
 							))}
-						</tbody>
-					</table>
+					</div>
+					<div className="knob">
+						<Glyph name="eye" size={14} title="Incoming inspection" />
+						<SampleGate
+							label="Incoming inspection"
+							plan={view.policies.iqc[item]}
+							onChange={(plan) =>
+								setError(act({ type: "set_iqc", item, plan }))
+							}
+						/>
+					</div>
+					<div className="knob reorder">
+						<label className="check" title="Reorder automatically">
+							<input
+								type="checkbox"
+								checked={policy.enabled}
+								onChange={(e) => setPolicy({ enabled: e.target.checked })}
+							/>
+							Auto
+						</label>
+						<span className="muted small">below</span>
+						<IntField
+							label="Reorder below"
+							min={0}
+							value={policy.reorder_point}
+							onCommit={(n) => setPolicy({ reorder_point: n })}
+						/>
+						<span className="muted small">buy</span>
+						<IntField
+							label="Reorder quantity"
+							min={1}
+							value={policy.order_qty}
+							onCommit={(n) => setPolicy({ order_qty: n })}
+						/>
+					</div>
 					<div className="order-row">
 						<IntField
 							label="Order quantity"
@@ -135,14 +144,15 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 							value={qty}
 							onCommit={setQty}
 						/>
-						<label className="check">
-							<input
-								type="checkbox"
-								checked={expedite}
-								onChange={(e) => setExpedite(e.target.checked)}
-							/>
-							Air freight (+50%, ~1/3 lead)
-						</label>
+						<button
+							type="button"
+							className={expedite ? "toggle on" : "toggle"}
+							aria-pressed={expedite}
+							onClick={() => setExpedite(!expedite)}
+							title="Air freight: +50% cost, about a third of the lead time"
+						>
+							<Glyph name="bolt" size={13} /> Air
+						</button>
 						<button
 							type="button"
 							className="primary"
@@ -160,10 +170,8 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 						>
 							Order
 						</button>
-						{current && (
-							<span className={belowMin ? "warn-text small" : "muted small"}>
-								{current.name} minimum: {current.min_order}
-							</span>
+						{current && belowMin && (
+							<span className="warn-text small">min {current.min_order}</span>
 						)}
 					</div>
 					{error && (
@@ -177,8 +185,18 @@ function PartRow({ game, item }: { game: Game; item: Item }) {
 	);
 }
 
-export function SupplyPanel({ game }: { game: Game }) {
+export function SupplyPanel({
+	game,
+	focusPart,
+}: {
+	game: Game;
+	focusPart: PartFocus | null;
+}) {
 	const { view } = game;
+	const [open, setOpen] = useState<Item | null>(focusPart?.item ?? null);
+	useEffect(() => {
+		if (focusPart) setOpen(focusPart.item);
+	}, [focusPart]);
 	const purchased = view.stock.filter((s) => s.purchased);
 	const supplierName = (id: number) =>
 		view.suppliers.find((s) => s.id === id)?.name ?? "?";
@@ -186,25 +204,36 @@ export function SupplyPanel({ game }: { game: Game }) {
 		<div className="panel-body">
 			<ul className="parts">
 				{purchased.map((s) => (
-					<PartRow key={s.item} game={game} item={s.item} />
+					<PartRow
+						key={s.item}
+						game={game}
+						item={s.item}
+						open={open === s.item}
+						onToggle={() => setOpen(open === s.item ? null : s.item)}
+					/>
 				))}
 			</ul>
-			<h3>Open orders</h3>
-			{view.orders.length === 0 && <p className="muted">None.</p>}
-			<ul className="orders">
-				{view.orders.map((o) => (
-					<li key={o.id} className={o.late ? "late" : ""}>
-						<span>
-							{o.qty} × {view.stock.find((s) => s.item === o.item)?.label}
-						</span>
-						<span className="muted">{supplierName(o.supplier)}</span>
-						<span className={o.late ? "warn-text" : "muted"}>
-							{o.late ? "late" : `due ${formatTick(o.promised)}`}
-							{o.expedited ? " · air" : ""}
-						</span>
-					</li>
-				))}
-			</ul>
+			<h3>
+				<Glyph name="truck" size={14} /> On the road
+			</h3>
+			{view.orders.length === 0 && <p className="muted">Nothing.</p>}
+			<Road
+				now={view.tick}
+				orders={view.orders.map((o) => ({
+					id: o.id,
+					placed: o.placed,
+					promised: o.promised,
+					late: o.late,
+					expedited: o.expedited,
+					icon: (
+						<>
+							<ItemIcon item={o.item} size={16} />
+							<span className="num small">{o.qty}</span>
+						</>
+					),
+					title: `${o.qty} from ${supplierName(o.supplier)}`,
+				}))}
+			/>
 		</div>
 	);
 }
