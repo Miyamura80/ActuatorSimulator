@@ -4,7 +4,7 @@ import type { StationKind } from "../sim/types";
 import type { Game } from "../sim/useGame";
 import { formatMoney, formatMoneyCompact } from "./format";
 import { IntField } from "./IntField";
-import { capacity } from "./visual/FlowMap";
+import { capacity } from "./visual/capacity";
 import { ServiceBar, WearRing } from "./visual/gauges";
 import { Glyph, type GlyphName } from "./visual/glyphs";
 import { ItemIcon, StationIcon } from "./visual/icons";

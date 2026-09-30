@@ -168,6 +168,7 @@ export function QualityPanel({ game, traceLot, setTraceLot }: Props) {
 		<div className="panel-body">
 			{traceLot !== null && (
 				<TraceView
+					key={traceLot}
 					game={game}
 					lot={traceLot}
 					onClose={() => setTraceLot(null)}

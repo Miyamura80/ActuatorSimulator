@@ -5,8 +5,8 @@
 import type { CSSProperties } from "react";
 import { beaconState } from "../../floor/status";
 import type { Item, StationKind, StationView, View } from "../../sim/types";
+import { capacity } from "./capacity";
 import { BEACON, ITEM_COLOR } from "./colors";
-import { inspectedShare } from "./gauges";
 import { Glyph } from "./glyphs";
 import { ItemIcon, StationIcon } from "./icons";
 
@@ -50,24 +50,6 @@ const SHORT: Record<StationKind, string> = {
 	final_asm: "Final",
 	eol_test: "Test",
 };
-
-/** Worn machines run slower; mirrors `speed_factor` in the sim. */
-const speed = (condition: number) => 0.7 + 0.3 * (condition / 100);
-/** A unit the end-of-line bench skips costs this share of a tested one. */
-const UNTESTED_COST = 0.15;
-
-/**
- * Units per hour the station can make with the machines that are up, at
- * their current condition. The test bench goes faster when it samples.
- */
-export function capacity(st: StationView, view: View): number {
-	const rate = st.machines
-		.filter((m) => !m.down_reason)
-		.reduce((a, m) => a + st.rate_per_hour * speed(m.condition), 0);
-	if (st.kind !== "eol_test") return rate;
-	const tested = inspectedShare(view.policies.eol);
-	return rate / (tested + (1 - tested) * UNTESTED_COST);
-}
 
 const pipeWidth = (cap: number) =>
 	Math.min(18, cap === 0 ? 1 : 1.5 + cap * 1.8);

@@ -1,7 +1,7 @@
 // Rough delivery forecast for the contract board: the line's bottleneck rate
 // works through contracts in deadline order, the way the sim ships them.
 import type { Contract, View } from "../../sim/types";
-import { capacity } from "./FlowMap";
+import { capacity } from "./capacity";
 
 /** Finished units per game hour, averaged over the day (shifts included). */
 function hourlyOutput(view: View): number {

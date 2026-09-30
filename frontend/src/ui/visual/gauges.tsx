@@ -2,6 +2,7 @@
 // strip, a delivery road, a deadline track.
 import type { CSSProperties } from "react";
 import type { InspectionPlan } from "../../sim/types";
+import { inspectedShare } from "./capacity";
 import { healthColor } from "./colors";
 import { Glyph } from "./glyphs";
 
@@ -87,12 +88,6 @@ const SAMPLE_PLANS: { plan: InspectionPlan; label: string }[] = [
 	{ plan: { mode: "sample", percent: 25 }, label: "25%" },
 	{ plan: { mode: "full" }, label: "All" },
 ];
-
-export function inspectedShare(p: InspectionPlan | undefined): number {
-	if (!p || p.mode === "skip") return 0;
-	if (p.mode === "full") return 1;
-	return p.percent / 100;
-}
 
 const samePlan = (a: InspectionPlan | undefined, b: InspectionPlan) =>
 	inspectedShare(a) === inspectedShare(b) && (a?.mode ?? "skip") === b.mode;

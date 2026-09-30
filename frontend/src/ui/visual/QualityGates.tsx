@@ -2,7 +2,8 @@
 // each bin under the pipeline is what was caught there, and the coins say
 // what one catch there costs. Catching early is cheap.
 import type { InspectionPlan, View } from "../../sim/types";
-import { inspectedShare, SampleGate } from "./gauges";
+import { inspectedShare } from "./capacity";
+import { SampleGate } from "./gauges";
 import { Glyph } from "./glyphs";
 
 interface Props {
