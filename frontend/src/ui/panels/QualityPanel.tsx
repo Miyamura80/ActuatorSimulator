@@ -49,7 +49,7 @@ function TraceView({
 			</div>
 		);
 	// A finished lot lists itself among its finished lots; show only others.
-	const _downstream = r.finished_lots.filter((l) => l.lot !== r.lot);
+	const downstream = r.finished_lots.filter((l) => l.lot !== r.lot);
 	const lotList = (lines: TraceLine[], label: string) => (
 		<ul className="col" aria-label={label}>
 			{lines.slice(0, MAX_NODES).map((l) => (
@@ -111,7 +111,7 @@ function TraceView({
 				</ul>
 				<span className="link" aria-hidden="true" />
 				<div className="col">
-					{r.finished_lots.length > 0 && lotList(r.finished_lots, "Went into")}
+					{downstream.length > 0 && lotList(downstream, "Went into")}
 					<ul className="col" aria-label="Where it is">
 						<li className="node" title="In stock">
 							<Glyph name="check" size={14} title="In stock" />
