@@ -103,15 +103,18 @@ export function popFor(e: GameEvent): Omit<Pop, "id"> | null {
 				content: <Glyph name="alert" size={18} />,
 			};
 		case "machine_bought":
+		case "machine_sold": {
+			const bought = k.type === "machine_bought";
 			return {
 				anchor: at.station(station),
-				className: "pop good",
+				className: bought ? "pop good" : "pop info",
 				content: (
 					<>
-						<Glyph name="plus" size={14} />1
+						<Glyph name={bought ? "plus" : "minus"} size={14} />1
 					</>
 				),
 			};
+		}
 		default:
 			return null;
 	}

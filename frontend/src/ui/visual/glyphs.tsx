@@ -3,6 +3,12 @@
 import type { ReactNode } from "react";
 
 export const INK = "#15181b";
+/**
+ * Cut-out details inside a currentColor glyph (the bar in the alert, the
+ * pupil, the coin's $). A consumer that sets a dark `color` can set
+ * `--glyph-ink` to a light one so the detail still shows.
+ */
+const DETAIL = "var(--glyph-ink, #15181b)";
 
 export function Svg({
 	size,
@@ -50,8 +56,8 @@ const GLYPHS = {
 	alert: (
 		<>
 			<path d="M12 3L2 20h20z" fill="currentColor" />
-			<rect x="11" y="9" width="2" height="6" fill={INK} />
-			<rect x="11" y="16.5" width="2" height="2" fill={INK} />
+			<rect x="11" y="9" width="2" height="6" style={{ fill: DETAIL }} />
+			<rect x="11" y="16.5" width="2" height="2" style={{ fill: DETAIL }} />
 		</>
 	),
 	coin: (
@@ -59,7 +65,7 @@ const GLYPHS = {
 			<circle cx="12" cy="12" r="9" fill="currentColor" />
 			<path
 				d="M14.5 8.5h-3.5a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H9.5M12 6.5v11"
-				stroke={INK}
+				style={{ stroke: DETAIL }}
 				strokeWidth="1.6"
 				fill="none"
 			/>
@@ -84,7 +90,7 @@ const GLYPHS = {
 				d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"
 				fill="currentColor"
 			/>
-			<circle cx="12" cy="12" r="3.5" fill={INK} />
+			<circle cx="12" cy="12" r="3.5" style={{ fill: DETAIL }} />
 		</>
 	),
 	plus: <path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z" fill="currentColor" />,

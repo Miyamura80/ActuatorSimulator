@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { GameEvent, Item } from "../../sim/types";
+import type { GameEvent, TraceLine } from "../../sim/types";
 import type { Game } from "../../sim/useGame";
-import { formatMoney, formatTick } from "../format";
+import { formatTick } from "../format";
 import { Glyph, type GlyphName } from "../visual/glyphs";
 import { ItemIcon, StationIcon } from "../visual/icons";
 import { QualityGates } from "../visual/QualityGates";
@@ -20,14 +20,20 @@ function eventLot(e: GameEvent): number | null {
 }
 
 /** A lot's family tree: what went in, the lot, and where it went. */
+/** Upstream and downstream lots shown before the list is cut short. */
+const MAX_NODES = 8;
+
 function TraceView({
 	game,
 	lot,
 	onClose,
+	onTrace,
 }: {
 	game: Game;
 	lot: number;
 	onClose: () => void;
+	/** Follow the family tree to another lot. */
+	onTrace: (lot: number) => void;
 }) {
 	const [error, setError] = useState<string | null>(null);
 	const r = game.trace(lot);
@@ -42,9 +48,31 @@ function TraceView({
 				</button>
 			</div>
 		);
-	const byItem = new Map<Item, number>();
-	for (const l of r.source_lots)
-		byItem.set(l.item, (byItem.get(l.item) ?? 0) + 1);
+	// A finished lot lists itself among its finished lots; show only others.
+	const _downstream = r.finished_lots.filter((l) => l.lot !== r.lot);
+	const lotList = (lines: TraceLine[], label: string) => (
+		<ul className="col" aria-label={label}>
+			{lines.slice(0, MAX_NODES).map((l) => (
+				<li key={l.lot}>
+					<button
+						type="button"
+						className="node"
+						title={l.supplier_name ?? undefined}
+						onClick={() => onTrace(l.lot)}
+					>
+						<ItemIcon item={l.item} size={16} />
+						<span className="num small">#{l.lot}</span>
+						{l.supplier_name && (
+							<span className="sr-only">{l.supplier_name}</span>
+						)}
+					</button>
+				</li>
+			))}
+			{lines.length > MAX_NODES && (
+				<li className="muted small">+{lines.length - MAX_NODES}</li>
+			)}
+		</ul>
+	);
 	return (
 		<div className="trace">
 			<header>
@@ -58,42 +86,42 @@ function TraceView({
 					×
 				</button>
 			</header>
-			<div className="family" role="img" aria-label={`Lot ${r.lot} genealogy`}>
-				<div className="col">
-					{r.supplier_name ? (
-						<span className="node" title={r.supplier_name}>
+			<div className="family">
+				{r.supplier_name ? (
+					<ul className="col" aria-label="Came from">
+						<li className="node" title={r.supplier_name}>
 							<Glyph name="truck" size={18} />
-						</span>
-					) : (
-						[...byItem].map(([item, n]) => (
-							<span key={item} className="node" title={`${n} lot(s)`}>
-								<ItemIcon item={item} size={18} />
-								{n > 1 && <span className="num small">×{n}</span>}
-							</span>
-						))
-					)}
-				</div>
-				<span className="link" />
-				<div className="col">
-					<span
+							<span className="small">{r.supplier_name}</span>
+						</li>
+					</ul>
+				) : (
+					lotList(r.source_lots, "Built from")
+				)}
+				<span className="link" aria-hidden="true" />
+				<ul className="col" aria-label="This lot">
+					<li
 						className={`node me${r.recalled ? " recalled" : ""}`}
 						title={r.label}
 					>
 						{r.built_at ? <StationIcon kind={r.built_at} size={16} /> : null}
-						<ItemIcon item={r.item} size={26} />
+						<ItemIcon item={r.item} size={26} title={r.label} />
 						<span className="num small">{r.initial_qty}</span>
-					</span>
-				</div>
-				<span className="link" />
+						{r.recalled && <span className="sr-only">recalled</span>}
+					</li>
+				</ul>
+				<span className="link" aria-hidden="true" />
 				<div className="col">
-					<span className="node" title="In stock">
-						<Glyph name="check" size={14} />
-						<span className="num small">{r.remaining}</span>
-					</span>
-					<span className="node" title="Shipped to customers">
-						<Glyph name="user" size={16} />
-						<span className="num small">{r.shipped_units}</span>
-					</span>
+					{r.finished_lots.length > 0 && lotList(r.finished_lots, "Went into")}
+					<ul className="col" aria-label="Where it is">
+						<li className="node" title="In stock">
+							<Glyph name="check" size={14} title="In stock" />
+							<span className="num small">{r.remaining}</span>
+						</li>
+						<li className="node" title="Shipped to customers">
+							<Glyph name="user" size={16} title="Shipped to customers" />
+							<span className="num small">{r.shipped_units}</span>
+						</li>
+					</ul>
 				</div>
 			</div>
 			<div className="actions">
@@ -104,8 +132,7 @@ function TraceView({
 					onClick={() => setError(game.act({ type: "recall", lot: r.lot }))}
 					title="About $140 per shipped unit and some reputation; stops the rest failing"
 				>
-					<Glyph name="back" size={14} /> Recall{" "}
-					<span className="small">~{formatMoney(r.shipped_units * 140)}</span>
+					<Glyph name="back" size={14} /> Recall
 				</button>
 				<button
 					type="button"
@@ -144,6 +171,7 @@ export function QualityPanel({ game, traceLot, setTraceLot }: Props) {
 					game={game}
 					lot={traceLot}
 					onClose={() => setTraceLot(null)}
+					onTrace={setTraceLot}
 				/>
 			)}
 			<QualityGates
@@ -181,8 +209,8 @@ export function QualityPanel({ game, traceLot, setTraceLot }: Props) {
 					return (
 						<li key={e.seq} className={`sev-${e.severity}`}>
 							<Glyph name={QUALITY_EVENTS[e.kind.type]} size={14} />
-							<span className="msg" title={formatTick(e.tick)}>
-								{e.message}
+							<span className="msg">
+								<span className="when">{formatTick(e.tick)}</span> {e.message}
 							</span>
 							{lot !== null && (
 								<button

@@ -4,6 +4,7 @@ import type { StationKind } from "../sim/types";
 import type { Game } from "../sim/useGame";
 import { formatMoney, formatMoneyCompact } from "./format";
 import { IntField } from "./IntField";
+import { capacity } from "./visual/FlowMap";
 import { ServiceBar, WearRing } from "./visual/gauges";
 import { Glyph, type GlyphName } from "./visual/glyphs";
 import { ItemIcon, StationIcon } from "./visual/icons";
@@ -96,8 +97,7 @@ export function StationCard({ game, kind, onClose }: Props) {
 				</span>
 				<span className="rate" title="Capacity per hour">
 					<span className="num">
-						{st.machines.filter((m) => !m.down_reason).length *
-							st.rate_per_hour}
+						{Math.round(capacity(st, view) * 10) / 10}
 					</span>
 					<span className="muted small">/h</span>
 				</span>
@@ -116,6 +116,7 @@ export function StationCard({ game, kind, onClose }: Props) {
 						className="add-machine"
 						onClick={() => run(act({ type: "buy_machine", station: kind }))}
 						title={`Buy a machine for ${formatMoney(st.machine_price)}`}
+						aria-label={`Buy a machine for ${formatMoney(st.machine_price)}`}
 					>
 						<Glyph name="plus" size={14} />
 						<span className="small">

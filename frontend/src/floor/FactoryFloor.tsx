@@ -362,7 +362,9 @@ export function FactoryFloor({ view, events, selected, onSelect }: Props) {
 		},
 		// Stack pops that share an anchor so they don't sit on each other.
 		...pops.map((p, i) => {
-			const twins = pops.slice(0, i).filter((q) => q.anchor === p.anchor);
+			const twins = pops
+				.slice(0, i)
+				.filter((q) => q.anchor.every((v, j) => v === p.anchor[j]));
 			const [x, y, z] = p.anchor;
 			return {
 				id: p.id,

@@ -5,11 +5,14 @@ import { capacity } from "./FlowMap";
 
 /** Finished units per game hour, averaged over the day (shifts included). */
 function hourlyOutput(view: View): number {
-	const bottleneck = Math.min(...view.stations.map(capacity));
+	const bottleneck = Math.min(...view.stations.map((s) => capacity(s, view)));
 	const hoursPerDay = Math.min(3, view.policies.shifts) * 8;
 	// The same 90% the autopilot plans with: lots, changeovers, small stalls.
 	return (bottleneck * 0.9 * hoursPerDay) / 24;
 }
+
+/** Hour of day the sim ships finished goods (`SHIP_HOUR` in contracts.rs). */
+const SHIP_HOUR = 17;
 
 const dueTick = (view: View, c: Contract) =>
 	c.deadline ?? view.tick + c.lead_days * 24;
@@ -32,9 +35,21 @@ export function forecast(view: View, extra?: Contract): Map<number, number> {
 		stock -= fromStock;
 		need -= fromStock;
 		hours += need === 0 ? 0 : rate > 0 ? need / rate : Number.POSITIVE_INFINITY;
-		out.set(c.id, hours);
+		out.set(c.id, shipsAfter(view, hours));
 	}
 	return out;
+}
+
+/**
+ * Hours from now until goods finished `hours` from now leave on a truck:
+ * the next 17:00 ship window, and never while auto-ship is off.
+ */
+function shipsAfter(view: View, hours: number): number {
+	if (!view.policies.auto_ship || !Number.isFinite(hours))
+		return Number.POSITIVE_INFINITY;
+	const done = view.tick + Math.ceil(hours);
+	const day = Math.floor(done / 24) + (done % 24 > SHIP_HOUR ? 1 : 0);
+	return day * 24 + SHIP_HOUR - view.tick;
 }
 
 export function hoursUntilDue(view: View, c: Contract): number {

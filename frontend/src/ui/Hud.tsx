@@ -43,11 +43,13 @@ export function Hud({ game, mode, onSave, onExit, onSettings, notice }: Props) {
 			</div>
 			<div className={cashClass}>
 				<CashSpark view={view} />
+				<span className="sr-only">Cash</span>
 				<span className="v">{formatMoney(view.cash)}</span>
 			</div>
 			<div className="stat">
 				<span className="v" title="Reputation: wins bigger contracts">
 					<Glyph name="star" size={14} className="gold" />
+					<span className="sr-only">Reputation</span>
 					<span className="meter">
 						<span style={{ width: `${view.reputation}%` }} />
 					</span>
@@ -57,6 +59,7 @@ export function Hud({ game, mode, onSave, onExit, onSettings, notice }: Props) {
 			<div className="stat">
 				<span className="v seg" title="Shifts per day">
 					<Glyph name="user" size={14} className="muted" />
+					<span className="sr-only">Shifts</span>
 					{[1, 2, 3].map((n) => (
 						<button
 							type="button"

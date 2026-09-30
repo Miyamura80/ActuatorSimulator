@@ -18,7 +18,7 @@ export function SpcChart({
 	const h = height;
 	const max = limit * 1.2;
 	const y = (v: number) =>
-		h / 2 - (Math.max(-max, Math.min(max, v)) / max) * (h / 2);
+		h / 2 - (Math.max(-max, Math.min(max, v)) / max) * ((h - 8) / 2);
 	const warn = (limit * 2) / 3;
 	const n = Math.max(values.length - 1, 1);
 	const x = (i: number) => 4 + ((W - 8) * i) / n;

@@ -64,7 +64,7 @@ export function QualityGates({ view, days, onEol }: Props) {
 	const eol = inspectedShare(view.policies.eol);
 	return (
 		<div className="gates">
-			<div className="gate-line" aria-hidden="true">
+			<div className="gate-line">
 				<span className="end">
 					<Glyph name="truck" size={20} />
 				</span>
@@ -74,6 +74,7 @@ export function QualityGates({ view, days, onEol }: Props) {
 					title="Incoming inspection"
 				>
 					<Glyph name="eye" size={16} />
+					<span className="sr-only">Incoming inspection</span>
 					<span className="share">{Math.round(iqc * 100)}%</span>
 				</span>
 				<span className="flow" />
@@ -86,6 +87,7 @@ export function QualityGates({ view, days, onEol }: Props) {
 					title="End-of-line test"
 				>
 					<Glyph name="eye" size={16} />
+					<span className="sr-only">End-of-line test</span>
 					<span className="share">{Math.round(eol * 100)}%</span>
 				</span>
 				<span className="flow" />

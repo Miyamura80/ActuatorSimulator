@@ -49,7 +49,10 @@ export function TierStars({
 	);
 }
 
-/** One dot per lot received; red for rejected. The last 10 at most. */
+/**
+ * Up to 10 dots standing for the lots received, with the rejected share in
+ * red. Any rejection shows at least one red dot.
+ */
 export function LotRecord({
 	received,
 	rejected,
@@ -58,7 +61,10 @@ export function LotRecord({
 	rejected: number;
 }) {
 	const shown = Math.min(received, 10);
-	const bad = Math.round((rejected / Math.max(received, 1)) * shown);
+	const bad =
+		rejected > 0
+			? Math.min(shown, Math.max(1, Math.round((rejected / received) * shown)))
+			: 0;
 	if (shown === 0) return <span className="lot-record muted small">new</span>;
 	return (
 		<span
@@ -281,10 +287,12 @@ export function DeadlineTrack({
 		<span
 			className={`deadline-track${late ? " late" : ""}`}
 			role="img"
-			aria-label={`Due in ${Math.ceil(hoursLeft / 24)} days; ${
+			aria-label={`${
+				hoursLeft < 0 ? "Overdue" : `Due in ${Math.ceil(hoursLeft / 24)} days`
+			}; ${
 				Number.isFinite(forecastHours)
 					? `done in about ${Math.ceil(forecastHours / 24)} days`
-					: "no capacity"
+					: "no delivery forecast"
 			}`}
 		>
 			<span className="span" style={{ width: x(hoursLeft) }} />

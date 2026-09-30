@@ -119,7 +119,10 @@ const STEPS: Step[] = [
 	},
 ];
 
-/** The target's box, re-read as the layout moves. */
+/** How often the ring re-reads its target's box. */
+const TRACK_MS = 200;
+
+/** The target's box, re-read a few times a second as the layout moves. */
 function useTargetBox(selector: string | undefined) {
 	const [box, setBox] = useState<DOMRect | null>(null);
 	useEffect(() => {
@@ -127,22 +130,21 @@ function useTargetBox(selector: string | undefined) {
 			setBox(null);
 			return;
 		}
-		let raf = 0;
 		let prev = "";
-		const tick = () => {
+		const read = () => {
 			const r =
 				document.querySelector(selector)?.getBoundingClientRect() ?? null;
 			const key = r
-				? `${r.x | 0},${r.y | 0},${r.width | 0},${r.height | 0}`
+				? `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`
 				: "";
 			if (key !== prev) {
 				prev = key;
 				setBox(r);
 			}
-			raf = requestAnimationFrame(tick);
 		};
-		tick();
-		return () => cancelAnimationFrame(raf);
+		read();
+		const id = window.setInterval(read, TRACK_MS);
+		return () => window.clearInterval(id);
 	}, [selector]);
 	return box;
 }
@@ -168,10 +170,12 @@ export function Tutorial({ onFinish, ...ui }: Props) {
 
 	// The caption sits under the target, or above it near the bottom.
 	const pad = 8;
+	const width = Math.min(320, window.innerWidth - 24);
 	const below = box ? box.bottom + 170 < window.innerHeight : true;
 	const style = box
 		? {
-				left: Math.min(Math.max(12, box.left), window.innerWidth - 332),
+				left: Math.max(12, Math.min(box.left, window.innerWidth - width - 12)),
+				width,
 				top: below ? box.bottom + pad + 6 : undefined,
 				bottom: below ? undefined : window.innerHeight - box.top + pad + 6,
 			}

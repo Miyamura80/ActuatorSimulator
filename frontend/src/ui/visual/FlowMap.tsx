@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { beaconState } from "../../floor/status";
 import type { Item, StationKind, StationView, View } from "../../sim/types";
 import { BEACON, ITEM_COLOR } from "./colors";
+import { inspectedShare } from "./gauges";
 import { Glyph } from "./glyphs";
 import { ItemIcon, StationIcon } from "./icons";
 
@@ -50,9 +51,22 @@ const SHORT: Record<StationKind, string> = {
 	eol_test: "Test",
 };
 
-/** Units per hour the station can make with the machines that are up. */
-export function capacity(st: StationView): number {
-	return st.machines.filter((m) => !m.down_reason).length * st.rate_per_hour;
+/** Worn machines run slower; mirrors `speed_factor` in the sim. */
+const speed = (condition: number) => 0.7 + 0.3 * (condition / 100);
+/** A unit the end-of-line bench skips costs this share of a tested one. */
+const UNTESTED_COST = 0.15;
+
+/**
+ * Units per hour the station can make with the machines that are up, at
+ * their current condition. The test bench goes faster when it samples.
+ */
+export function capacity(st: StationView, view: View): number {
+	const rate = st.machines
+		.filter((m) => !m.down_reason)
+		.reduce((a, m) => a + st.rate_per_hour * speed(m.condition), 0);
+	if (st.kind !== "eol_test") return rate;
+	const tested = inspectedShare(view.policies.eol);
+	return rate / (tested + (1 - tested) * UNTESTED_COST);
 }
 
 const pipeWidth = (cap: number) =>
@@ -100,7 +114,7 @@ function pipes(view: View, bottleneck: StationKind | null): Pipe[] {
 					id: `${src.kind}-${st.kind}`,
 					d: curve(x1, sy, x2, ty),
 					item,
-					width: pipeWidth(capacity(src)),
+					width: pipeWidth(capacity(src, view)),
 					flowing: src.busy,
 					starved,
 					bottleneck: src.kind === bottleneck,
@@ -128,7 +142,7 @@ function pipes(view: View, bottleneck: StationKind | null): Pipe[] {
 			id: "eol-ship",
 			d: curve(x1, y, x2, SHIP[1]),
 			item: "finished_good",
-			width: pipeWidth(capacity(eol)),
+			width: pipeWidth(capacity(eol, view)),
 			flowing: eol.busy,
 			starved: false,
 			bottleneck: eol.kind === bottleneck,
@@ -138,11 +152,14 @@ function pipes(view: View, bottleneck: StationKind | null): Pipe[] {
 	return out;
 }
 
-/** The station with the least capacity, or null while every one is idle. */
+/**
+ * The station with the least capacity. It stays marked when the line is
+ * idle: the bottleneck is a property of the machines, not of the hour.
+ */
 function bottleneckOf(view: View): StationKind | null {
 	let best: StationView | null = null;
 	for (const st of view.stations)
-		if (!best || capacity(st) < capacity(best)) best = st;
+		if (!best || capacity(st, view) < capacity(best, view)) best = st;
 	return best?.kind ?? null;
 }
 
@@ -217,7 +234,7 @@ export function FlowMap({ view, selected, onSelect, onPart }: Props) {
 							} as CSSProperties
 						}
 						onClick={() => onPart(item)}
-						aria-label={`${s?.label ?? item}: ${q} in stock`}
+						aria-label={`${s?.label ?? item}: ${q} in stock${s?.on_order ? `, ${s.on_order} on order` : ""}`}
 						title={`${s?.label ?? item}: ${q}${s?.on_order ? ` (+${s.on_order} coming)` : ""}`}
 					>
 						<ItemIcon item={item} size={15} />
@@ -238,7 +255,7 @@ export function FlowMap({ view, selected, onSelect, onPart }: Props) {
 						key={st.kind}
 						data-station={st.kind}
 						aria-pressed={selected === st.kind}
-						aria-label={st.label}
+						aria-label={`${st.label}: ${state}${st.kind === neck ? ", bottleneck" : ""}`}
 						title={st.label}
 						className={`flow-node state-${state}${selected === st.kind ? " on" : ""}${st.kind === neck ? " neck" : ""}`}
 						style={
